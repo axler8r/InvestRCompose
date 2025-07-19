@@ -1,0 +1,63 @@
+# variables --------------------------------------------------------->8---------
+PYTHON ?= python3
+PROJECT_NAME := {shell basename $(CURDIR)}
+DOCKER_COMPOSE := docker compose
+
+
+# phony ------------------------------------------------------------->8---------
+.PHONY: help install
+
+
+# default target ---------------------------------------------------->8---------
+help: ## Show this help message
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z0-9_.-]+:.*?## / {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@echo ""
+	@echo "Quick Start:"
+	@echo "  make install    # Install dependencies"
+	@echo "  make up         # Start application"
+	@echo "  make test       # Run tests"
+
+
+# setup targets ----------------------------------------------------->8---------
+install: ## Install dependencies using uv
+	@echo "Installing dependencies..."
+	uv sync
+
+
+# lifecycle targets ------------------------------------------------->8---------
+up: ## Start the application using Docker Compose
+	@echo "Starting application..."
+	$(DOCKER_COMPOSE) up --detach
+
+down: ## Stop the application using Docker Compose
+	@echo "Stopping application..."
+	$(DOCKER_COMPOSE) down
+
+start: up ## Start the application using Docker Compose
+	@echo "Starting application..."
+
+stop: down ## Stop the application using Docker Compose
+	@echo "Stopping application..."
+
+restart: down up ## Restart the application using Docker Compose
+	@echo "Restarting application..."
+
+clean: down ## Clean up Docker containers and images
+	@echo "Cleaning up Docker containers and images..."
+	$(DOCKER_COMPOSE) down --rmi all --volumes --remove-orphans
+
+
+# utility targets --------------------------------------------------->8---------
+
+
+# test targets ------------------------------------------------------>8---------
+test: ## Run tests using pytest
+	@echo "Running tests..."
+	$(PYTHON) -m pytest --cov=src --cov-report=term-missing
+
+
+# data management targets ------------------------------------------->8---------
+
+
+# environment targets ----------------------------------------------->8---------
+
