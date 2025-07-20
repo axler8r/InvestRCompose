@@ -31,20 +31,18 @@ install: ## Install dependencies using uv
 	uv sync
 
 
-# lifecycle targets ------------------------------------------------->8---------
+# life cycle targets ------------------------------------------------>8---------
 up: ## Start the application using Docker Compose
 	@echo "Starting application..."
-	$(DOCKER_COMPOSE) up --detach
+	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) up --detach
 
 down: ## Stop the application using Docker Compose
 	@echo "Stopping application..."
-	$(DOCKER_COMPOSE) down
+	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) down
 
 start: up ## Start the application using Docker Compose
-	@echo "Starting application..."
 
 stop: down ## Stop the application using Docker Compose
-	@echo "Stopping application..."
 
 restart: down up ## Restart the application using Docker Compose
 	@echo "Restarting application..."
