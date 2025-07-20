@@ -2,10 +2,17 @@
 PYTHON ?= python3
 PROJECT_NAME := {shell basename $(CURDIR)}
 DOCKER_COMPOSE := docker compose
+UV := uv
+RUFF = $(UV) run ruff
+LINT_FLAGS := --fix --show-fixes --respect-gitignore --show-files
+APP_DIR := $(CURDIR)/app
+DOCKER_COMPOSE_FILE := $(APP_DIR)/compose.yml
+SOURCE_DIR := investr
+TEST_DIR := tests
 
 
 # phony ------------------------------------------------------------->8---------
-.PHONY: help install
+.PHONY: help install up down start stop restart clean lint format check test
 
 
 # default target ---------------------------------------------------->8---------
@@ -24,20 +31,18 @@ install: ## Install dependencies using uv
 	uv sync
 
 
-# lifecycle targets ------------------------------------------------->8---------
+# life cycle targets ------------------------------------------------>8---------
 up: ## Start the application using Docker Compose
 	@echo "Starting application..."
-	$(DOCKER_COMPOSE) up --detach
+	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) up --detach
 
 down: ## Stop the application using Docker Compose
 	@echo "Stopping application..."
-	$(DOCKER_COMPOSE) down
+	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) down
 
 start: up ## Start the application using Docker Compose
-	@echo "Starting application..."
 
 stop: down ## Stop the application using Docker Compose
-	@echo "Stopping application..."
 
 restart: down up ## Restart the application using Docker Compose
 	@echo "Restarting application..."
@@ -47,17 +52,21 @@ clean: down ## Clean up Docker containers and images
 	$(DOCKER_COMPOSE) down --rmi all --volumes --remove-orphans
 
 
-# utility targets --------------------------------------------------->8---------
+# code quality targets ---------------------------------------------->8---------
+lint: ## Run linters
+	@echo "Running linters..."
+	$(RUFF) check $(SOURCE_DIR) $(LINT_FLAGS)
+	$(RUFF) check $(TEST_DIR) $(LINT_FLAGS)
 
+format: ## Format code using black
+	@echo "Formatting code with black..."
+	$(RUFF) format $(SOURCE_DIR) --verbose
+	$(RUFF) format $(TEST_DIR) --verbose
+
+check: lint format ## Run code quality checks
+	@echo "Running code quality checks..."
 
 # test targets ------------------------------------------------------>8---------
 test: ## Run tests using pytest
 	@echo "Running tests..."
-	$(PYTHON) -m pytest --cov=src --cov-report=term-missing
-
-
-# data management targets ------------------------------------------->8---------
-
-
-# environment targets ----------------------------------------------->8---------
-
+	$(PYTHON) -m pytest $(TEST_DIR)

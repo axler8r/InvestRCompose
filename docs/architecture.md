@@ -6,59 +6,76 @@ A modular, containerised Docker Compose architecture comprising Python-based
 microservices, each serving distinct responsibilities.
 
 
-## Architectural Diagram
+## Architecture Layout
 ```text
 InvestR Compose (Docker Compose)
 │
 ├── Web UI (Flask)
-│   └── Presents UI; interacts with Agent Orchestration API.
+│   └── Presents UI; interacts with Agent API.
 │
-├── Agent API (FastAPI + AutoGen2)
+├── Agent API (FastAPI + AutoGen2 + OpenAI)
+│   ├── Interacts with LLM (OpenAI).
 │   ├── Execute agentic workflow and tool calls.
 │   └── Calls out to modular tool services:
-│       ├── Data API (FastAPI + AutoGen2)
-│       ├── Print API (FastAPI + OpenAI)
+│       ├── Data API (FastAPI + MongoDB + Chroma)
+│       ├── Print API (FastAPI + Markdown Utils + ReportLab)
 │       ├── Analysis API (placeholder; FastAPI)
-│       └── OpenBB (investment data)
+│       └── OpenBB API (FastAPI + OpenBB)
 │
 ├── Data API (FastAPI + MongoDB + Chroma)
 │   ├── Stores and retrieves embeddings in Chroma.
-│   ├── Stores user sessions, structured historical data, and workflow states in MongoDB.
-│   └── Persists structured data & workflow history in MongoDB.
+│   └── Stores user sessions and conversations in MongoDB.
 │
 ├── OpenBB API (FastAPI + OpenBB)
 │   └── Provides investment data via OpenBB SDK.
 │
-├── Print API (FastAPI + OpenAI)
-│   └── Generates Markdown/PDF prospectus via OpenAI LLM calls.
+├── Print API (FastAPI + Markdown Utils + ReportLab)
+│   └── Generates Markdown and PDF documents.
 │
 └── Analysis API (placeholder; FastAPI)
     └── Placeholder endpoints for future time-series models.
 ```
 
 
-## Components
+## Services
 
 ### Web UI (Flask)
 - Handles user interactions and UI.
-- Communicates with the Agent Orchestration API.
+- Communicates with the Agent API.
 
-### Agent API (FastAPI + AutoGen2)
+### Agent API (FastAPI + AutoGen2 + OpenAI)
 - Central orchestrator for agent workflows.
+- Interacts with OpenAI LLM for natural language processing.
 - Manages calls to financial APIs and downstream services.
 
 ### Data API
-- Embedding storage for efficient retrieval.
-- Persistent structured data storage.
+- Embedding storage and retrieval for efficient semantic search.
+- Stores user sessions and conversation history in MongoDB.
 
 ### OpenBB API
 - Provides access to investment data via OpenBB SDK.
 
-### Print API (FastAPI + OpenAI)
-- Dedicated service for creating prospectuses from structured inputs using OpenAI.
+### Print API (FastAPI + Markdown Utils + ReportLab)
+- Dedicated service for creating documents from structured inputs using Markdown
+  Utils or ReportLab.
 
 ### Analysis API (Placeholder)
 - Future-oriented service reserved for time-series analysis.
+
+### Docker Compose Services Diagram
+```mermaid
+flowchart TD
+    A[Web UI]
+    A --> B[Agent API]
+    B --> C[Data API]
+    B --> D[Print API]
+    B --> E[Analysis API]
+    B --> F[OpenBB API]
+    B -->|LLM Interactions| G[OpenAI LLM]
+    C -->|Embeddings, Sessions| C1[Chroma & MongoDB]
+    D -->|Markdown/PDF| D1[Markdown Utils & ReportLab]
+    F -->|Investment Data| F1[OpenBB SDK]
+```
 
 
 ## Advantages
@@ -83,10 +100,8 @@ InvestRCompose/
 ├── tests/                      # Test suite
 └── app/                        # All deployment/containerization
     ├── compose.yml             # Main Docker Compose file
-    ├── compose.dev.yml         # Development overrides
-    ├── compose.prod.yml        # Production overrides (future)
+    ├── .env                    # Environment variables
     ├── .env.example            # Environment template
-    ├── Makefile                # Docker-specific tasks
     └── services/               # Service-specific Dockerfiles
         ├── web/
         │   └── Dockerfile
@@ -105,7 +120,6 @@ InvestRCompose/
 ### Benefits of This Structure
 - **Clean root directory:** Only essential project files at the top level
 - **Deployment separation:** All containerization concerns isolated in `app/`
-- **Environment management:** Easy to maintain dev/prod compose configurations
 - **Service organization:** Each service gets dedicated folder for Docker configs
 
 ### Build Context Strategy
