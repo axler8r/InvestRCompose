@@ -52,8 +52,19 @@ clean: down ## Clean up Docker containers and images
 	$(DOCKER_COMPOSE) down --rmi all --volumes --remove-orphans
 
 
-# utility targets --------------------------------------------------->8---------
+# code quality targets ---------------------------------------------->8---------
+lint: ## Run linters
+	@echo "Running linters..."
+	$(RUFF) check $(SOURCE_DIR) $(LINT_FLAGS)
+	$(RUFF) check $(TEST_DIR) $(LINT_FLAGS)
 
+format: ## Format code using black
+	@echo "Formatting code with black..."
+	$(RUFF) format $(SOURCE_DIR) --verbose
+	$(RUFF) format $(TEST_DIR) --verbose
+
+check: lint format ## Run code quality checks
+	@echo "Running code quality checks..."
 
 # test targets ------------------------------------------------------>8---------
 test: ## Run tests using pytest
