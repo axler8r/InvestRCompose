@@ -1,0 +1,152 @@
+"""Investment research agent using AutoGen framework."""
+
+from typing import List, Optional
+
+from autogen_agentchat.agents import AssistantAgent
+from autogen_core.models import ChatCompletionClient
+from autogen_core.tools import BaseTool, StaticWorkbench
+
+from .tools import AnalysisTool, DataTool, OpenBBTool, PrintTool
+
+
+class InvestmentAgent:
+    """Factory class for creating investment research agents.
+
+    This class provides a convenient interface for creating AutoGen-based
+    investment research agents with pre-configured tools and capabilities.
+    """
+
+    @classmethod
+    def create_agent(
+        cls,
+        model_client: ChatCompletionClient,
+        data_api_url: str = "http://data-api:8000",
+        openbb_api_url: str = "http://openbb-api:8000",
+        print_api_url: str = "http://print-api:8000",
+        analysis_api_url: str = "http://analysis-api:8000",
+        system_message: Optional[str] = None,
+        agent_name: str = "investment_researcher",
+    ) -> AssistantAgent:
+        """Create an investment research agent with tools.
+
+        Args:
+            model_client: LLM client for the agent
+            data_api_url: URL for the Data API service
+            openbb_api_url: URL for the OpenBB API service
+            print_api_url: URL for the Print API service
+            analysis_api_url: URL for the Analysis API service
+            system_message: Custom system message for the agent
+            agent_name: Name for the agent
+
+        Returns:
+            Configured AssistantAgent with investment research tools
+
+        """
+        # Create tools
+        tools = cls._create_tools(
+            data_api_url=data_api_url,
+            openbb_api_url=openbb_api_url,
+            print_api_url=print_api_url,
+            analysis_api_url=analysis_api_url,
+        )
+
+        # Create default system message if none provided
+        if system_message is None:
+            system_message = cls._get_default_system_message()
+
+        # Create and return the agent
+        return AssistantAgent(
+            name=agent_name,
+            model_client=model_client,
+            tools=tools,
+            system_message=system_message,
+            description="An AI assistant specialized in investment research and analysis",
+        )
+
+    @classmethod
+    def create_workbench(
+        cls,
+        data_api_url: str = "http://data-api:8000",
+        openbb_api_url: str = "http://openbb-api:8000",
+        print_api_url: str = "http://print-api:8000",
+        analysis_api_url: str = "http://analysis-api:8000",
+    ) -> StaticWorkbench:
+        """Create a workbench with investment research tools.
+
+        Args:
+            data_api_url: URL for the Data API service
+            openbb_api_url: URL for the OpenBB API service
+            print_api_url: URL for the Print API service
+            analysis_api_url: URL for the Analysis API service
+
+        Returns:
+            Configured StaticWorkbench with investment tools
+
+        """
+        tools = cls._create_tools(
+            data_api_url=data_api_url,
+            openbb_api_url=openbb_api_url,
+            print_api_url=print_api_url,
+            analysis_api_url=analysis_api_url,
+        )
+
+        return StaticWorkbench(tools=tools)
+
+    @classmethod
+    def _create_tools(
+        cls,
+        data_api_url: str,
+        openbb_api_url: str,
+        print_api_url: str,
+        analysis_api_url: str,
+    ) -> List[BaseTool]:
+        """Create the investment research tools.
+
+        Args:
+            data_api_url: URL for the Data API service
+            openbb_api_url: URL for the OpenBB API service
+            print_api_url: URL for the Print API service
+            analysis_api_url: URL for the Analysis API service
+
+        Returns:
+            List of configured tools
+
+        """
+        return [
+            DataTool(data_api_base_url=data_api_url),
+            OpenBBTool(openbb_api_base_url=openbb_api_url),
+            PrintTool(print_api_base_url=print_api_url),
+            AnalysisTool(analysis_api_base_url=analysis_api_url),
+        ]
+
+    @classmethod
+    def _get_default_system_message(cls) -> str:
+        """Get the default system message for the investment agent.
+
+        Returns:
+            Default system message
+
+        """
+        return """You are an expert investment research assistant with access to powerful analytical tools.
+
+Your capabilities include:
+- Searching and retrieving investment data using semantic search
+- Fetching real-time and historical market data for stocks and financial instruments  
+- Performing statistical and financial analysis on data
+- Generating professional investment reports in various formats
+
+When helping users with investment research:
+
+1. **Data Collection**: Use the search_data tool to find relevant company information, financial statements, and market research
+2. **Market Analysis**: Use get_market_data to retrieve current prices, historical data, and market metrics
+3. **Statistical Analysis**: Use analyze_data to perform trend analysis, risk assessment, and generate insights
+4. **Report Generation**: Use generate_report to create professional documents with your findings
+
+Best Practices:
+- Always verify data sources and recency when making investment recommendations
+- Provide clear explanations of your analytical methods and assumptions
+- Include appropriate disclaimers about investment risks
+- Structure your responses logically: data gathering → analysis → insights → recommendations
+- Use multiple tools when needed to provide comprehensive analysis
+
+Remember: You are providing research and analysis, not personalized investment advice. Always remind users to consult with qualified financial advisors for investment decisions."""
