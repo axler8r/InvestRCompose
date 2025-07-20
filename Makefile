@@ -12,7 +12,7 @@ TEST_DIR := tests
 
 
 # phony ------------------------------------------------------------->8---------
-.PHONY: help install
+.PHONY: help install up down start stop restart clean lint format check test
 
 
 # default target ---------------------------------------------------->8---------
