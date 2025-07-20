@@ -13,7 +13,7 @@ from .schemas import (
 
 __all__ = [
     "AgentResponse",
-    "ConversationHistory", 
+    "ConversationHistory",
     "ErrorResponse",
     "HealthCheck",
     "Message",

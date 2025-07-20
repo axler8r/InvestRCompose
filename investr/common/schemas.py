@@ -11,12 +11,14 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
-class MessageRole(str, Enum):
-    """Role of a message in a conversation."""
+class UserRequest(BaseModel):
+    """Request from Web UI to Agent API."""
 
-    USER = "user"
-    ASSISTANT = "assistant"
-    SYSTEM = "system"
+    session_id: str = Field(..., description="Unique session identifier")
+    message: str = Field(..., description="User's input message")
+    context: Optional[Dict[str, Any]] = Field(
+        default=None, description="Additional context for the request"
+    )
 
 
 class RequestStatus(str, Enum):
@@ -26,25 +28,6 @@ class RequestStatus(str, Enum):
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
-
-
-class Message(BaseModel):
-    """A single message in a conversation."""
-
-    role: MessageRole
-    content: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    metadata: Optional[Dict[str, Any]] = None
-
-
-class UserRequest(BaseModel):
-    """Request from Web UI to Agent API."""
-
-    session_id: str = Field(..., description="Unique session identifier")
-    message: str = Field(..., description="User's input message")
-    context: Optional[Dict[str, Any]] = Field(
-        default=None, description="Additional context for the request"
-    )
 
 
 class AgentResponse(BaseModel):
@@ -60,6 +43,23 @@ class AgentResponse(BaseModel):
     references: Optional[List[str]] = Field(
         default=None, description="Links or document references provided by the agent"
     )
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class MessageRole(str, Enum):
+    """Role of a message in a conversation."""
+
+    USER = "user"
+    ASSISTANT = "assistant"
+    SYSTEM = "system"
+
+
+class Message(BaseModel):
+    """A single message in a conversation."""
+
+    role: MessageRole
+    content: str
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     metadata: Optional[Dict[str, Any]] = None
 
 
