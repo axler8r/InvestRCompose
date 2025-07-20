@@ -7,3 +7,15 @@ requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.11.7",
 ]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = [ "D", "F", "FAST", "I", "N", ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+    "ruff>=0.12.4",
+]
