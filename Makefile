@@ -69,11 +69,4 @@ check: lint format ## Run code quality checks
 # test targets ------------------------------------------------------>8---------
 test: ## Run tests using pytest
 	@echo "Running tests..."
-	$(PYTHON) -m pytest --cov=src --cov-report=term-missing
-
-
-# data management targets ------------------------------------------->8---------
-
-
-# environment targets ----------------------------------------------->8---------
-
+	$(PYTHON) -m pytest $(TEST_DIR)
