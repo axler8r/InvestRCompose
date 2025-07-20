@@ -2,6 +2,13 @@
 PYTHON ?= python3
 PROJECT_NAME := {shell basename $(CURDIR)}
 DOCKER_COMPOSE := docker compose
+UV := uv
+RUFF = $(UV) run ruff
+LINT_FLAGS := --fix --show-fixes --respect-gitignore --show-files
+APP_DIR := $(CURDIR)/app
+DOCKER_COMPOSE_FILE := $(APP_DIR)/compose.yml
+SOURCE_DIR := investr
+TEST_DIR := tests
 
 
 # phony ------------------------------------------------------------->8---------
