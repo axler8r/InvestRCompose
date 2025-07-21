@@ -1,4 +1,17 @@
-"""Pydantic models for agent requests, responses, and data structures."""
+"""Pydantic models for agent requests, responses, and data structures.
+
+PURPOSE: Agent domain models - use for internal agent operations and workflows
+SCOPE: Internal agent module operations, task execution, tool orchestration
+CHARACTERISTICS: Complex, detailed, rich domain logic and business rules
+
+This module defines rich domain models for the agent's internal operations including:
+- Task execution contexts and workflows
+- Tool execution arguments and results
+- Detailed agent responses with execution metadata
+- Investment research domain-specific data structures
+
+For simple service-to-service communication schemas, use investr.common.schemas instead.
+"""
 
 from datetime import datetime
 from enum import Enum

@@ -2,6 +2,12 @@
 
 This module defines Pydantic schemas for payloads flowing between the Web UI
 and Agent API, ensuring type safety and validation across service boundaries.
+
+PURPOSE: Service boundary schemas - use for API contracts between services
+SCOPE: External communication between microservices (Web UI ↔ Agent API)
+CHARACTERISTICS: Simple, stable, focused on API contracts
+
+For internal agent operations and complex domain models, use investr.agent.models instead.
 """
 
 from datetime import datetime, timezone
