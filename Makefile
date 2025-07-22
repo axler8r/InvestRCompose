@@ -12,7 +12,7 @@ TEST_DIR := tests
 
 
 # phony ------------------------------------------------------------->8---------
-.PHONY: help install up down start stop restart clean lint format check test
+.PHONY: help install up down start stop restart clean lint format check test requirements build status logs
 
 
 # default target ---------------------------------------------------->8---------
@@ -57,6 +57,14 @@ stop: down ## Stop the application using Docker Compose
 
 restart: down up ## Restart the application using Docker Compose
 	@echo "Restarting application..."
+
+status: ## Show the status of Docker containers
+	@echo "Checking status of Docker containers..."
+	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) ps
+
+logs: ## Show logs of Docker containers
+	@echo "Showing logs of Docker containers..."
+	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) logs --follow
 
 clean: down ## Clean up Docker containers and images
 	@echo "Cleaning up Docker containers and images..."
