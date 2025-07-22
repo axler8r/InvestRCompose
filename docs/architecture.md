@@ -97,6 +97,12 @@ InvestRCompose/
 ├── docs/
 │   └── architecture.md
 ├── investr/                    # Python package source code
+|   ├── agent/                  # Agent API and models
+|   ├── common/                 # Common schemas and utilities
+|   ├── data/                   # Data API and utilities
+|   ├── openbb/                 # OpenBB API integration
+|   ├── print/                  # Print API utilities
+|   └── analysis/               # Analysis API (placeholder)
 ├── tests/                      # Test suite
 └── app/                        # All deployment/containerization
     ├── compose.yml             # Main Docker Compose file
