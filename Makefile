@@ -32,6 +32,17 @@ install: ## Install dependencies using uv
 
 
 # life cycle targets ------------------------------------------------>8---------
+requirements: ## Create a requirements.txt file from the current environment
+	@echo "Exporting requirements from uv..."
+	uv export --format requirements-txt --no-hashes --no-emit-project \
+		--output-file $(APP_DIR)/requirements.txt
+
+build: requirements ## Build all application components
+	@echo "Building Docker images..."
+	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) build
+	@echo "Cleaning up requirements.txt..."
+	rm --force $(APP_DIR)/requirements.txt
+
 up: ## Start the application using Docker Compose
 	@echo "Starting application..."
 	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) up --detach
