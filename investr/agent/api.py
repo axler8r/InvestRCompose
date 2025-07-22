@@ -1,14 +1,24 @@
 """FastAPI wrapper for the investment research agent."""
 
+import os
 import time
 from typing import AsyncIterator, Dict
 
+import uvicorn
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 
-from .agent import InvestmentAgent
-from .models import AgentRequest, AgentResponse, ToolResult
+from investr.agent.agent import InvestmentAgent
+from investr.agent.models import (
+    AgentRequest,
+    TaskContext,
+    TaskPriority,
+    TaskType,
+    ToolResult,
+)
+from investr.agent.models import AgentResponse as InternalAgentResponse
+from investr.common.schemas import AgentResponse, RequestStatus, UserRequest
 
 
 class AgentAPI:
@@ -48,7 +58,98 @@ class AgentAPI:
             analysis_api_url=analysis_api_url,
         )
 
-    async def process_request(self, request: AgentRequest) -> AgentResponse:
+    def _convert_user_request_to_agent_request(
+        self, user_request: UserRequest
+    ) -> AgentRequest:
+        """Convert UserRequest to internal AgentRequest.
+
+        Args:
+            user_request: Request from web UI
+
+        Returns:
+            Internal agent request
+
+        """
+        context = TaskContext(
+            session_id=user_request.session_id,
+            user_id=None,
+            preferences={},
+            previous_context=user_request.context,
+        )
+
+        return AgentRequest(
+            task=user_request.message,
+            task_type=TaskType.DATA_QUERY,
+            priority=TaskPriority.MEDIUM,
+            context=context,
+            max_iterations=5,
+            stream_response=False,
+        )
+
+    def _convert_internal_response_to_agent_response(
+        self, internal_response: InternalAgentResponse, session_id: str
+    ) -> AgentResponse:
+        """Convert internal AgentResponse to common schema AgentResponse.
+
+        Args:
+            internal_response: Internal agent response
+            session_id: Session identifier
+
+        Returns:
+            Common schema agent response
+
+        """
+        # Convert tool results to tool_calls format
+        tool_calls = []
+        for tool in internal_response.tools_used:
+            tool_calls.append(
+                {
+                    "name": tool.tool_name,
+                    "success": tool.success,
+                    "result": str(tool.result),
+                    "execution_time_ms": tool.execution_time_ms,
+                }
+            )
+
+        return AgentResponse(
+            session_id=session_id,
+            message=internal_response.response,
+            status=RequestStatus.COMPLETED
+            if internal_response.task_completed
+            else RequestStatus.FAILED,
+            tool_calls=tool_calls,
+            references=[],
+            metadata={
+                "execution_time_ms": internal_response.total_execution_time_ms,
+                "token_usage": internal_response.token_usage,
+            },
+        )
+
+    async def process_user_request(self, user_request: UserRequest) -> AgentResponse:
+        """Process a user request and return a response in common schema format.
+
+        Args:
+            user_request: The user request from web UI
+
+        Returns:
+            Agent response in common schema format
+
+        Raises:
+            HTTPException: If request processing fails
+
+        """
+        # Convert to internal format
+        agent_request = self._convert_user_request_to_agent_request(user_request)
+
+        # Process with existing method
+        internal_response = await self.process_request(agent_request)
+
+        # Convert back to common schema
+        return self._convert_internal_response_to_agent_response(
+            internal_response, user_request.session_id
+        )
+
+    async def process_request(self, request: AgentRequest) -> InternalAgentResponse:
         """Process an agent request and return a response.
 
         Args:
@@ -96,7 +197,7 @@ class AgentAPI:
 
             total_time = (time.time() - start_time) * 1000
 
-            return AgentResponse(
+            return InternalAgentResponse(
                 response=response_content.strip() or "Task completed successfully",
                 task_completed=True,
                 tools_used=tools_used,
@@ -176,9 +277,14 @@ def create_app(
         analysis_api_url=analysis_api_url,
     )
 
+    @app.post("/api/query")
+    async def query_agent(request: UserRequest) -> AgentResponse:
+        """Process an investment research query from web UI."""
+        return await agent_api.process_user_request(request)
+
     @app.post("/agent/query")
-    async def query_agent(request: AgentRequest) -> AgentResponse:
-        """Process an investment research query."""
+    async def query_agent_internal(request: AgentRequest) -> InternalAgentResponse:
+        """Process an investment research query (internal format)."""
         return await agent_api.process_request(request)
 
     @app.post("/agent/stream")
@@ -194,3 +300,35 @@ def create_app(
         return {"status": "healthy", "service": "investment-agent"}
 
     return app
+
+
+if __name__ == "__main__":
+    print("Starting Investment Agent API...")
+
+    # Get configuration from environment variables
+    openai_api_key = os.getenv("OPENAI_API_KEY", "placeholder-key")
+    model_name = os.getenv("MODEL_NAME", "gpt-4o-mini")
+    port = int(os.getenv("PORT", 8000))
+
+    print(
+        f"Configuration: API Key: {'***' if openai_api_key != 'placeholder-key' else 'placeholder'}, Model: {model_name}, Port: {port}"
+    )
+
+    try:
+        # Create the FastAPI app
+        print("Creating FastAPI app...")
+        app = create_app(
+            openai_api_key=openai_api_key,
+            model_name=model_name,
+        )
+        print("FastAPI app created successfully")
+
+        # Run the server
+        print(f"Starting server on 0.0.0.0:{port}")
+        uvicorn.run(app, host="0.0.0.0", port=port)
+    except Exception as e:
+        print(f"Error starting agent API: {e}")
+        import traceback
+
+        traceback.print_exc()
+        raise
