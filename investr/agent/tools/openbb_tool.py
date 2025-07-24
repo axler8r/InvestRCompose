@@ -15,7 +15,7 @@ class OpenBBTool(BaseTool[MarketDataArgs, MarketDataResult]):
     including stock prices, financial metrics, and market indicators.
     """
 
-    def __init__(self, openbb_api_base_url: str = "http://openbb-api:8000"):
+    def __init__(self, openbb_api_base_url: str = "http://openbb-api:8001"):
         """Initialize the OpenBB tool.
 
         Args:
@@ -47,10 +47,44 @@ class OpenBBTool(BaseTool[MarketDataArgs, MarketDataResult]):
             Market data with prices and metadata
 
         """
+        import httpx
+
         start_time = time.time()
 
-        # TODO: Implement actual HTTP client call to OpenBB API
-        # For now, return mock data to establish the interface
+        try:
+            # Call the OpenBB API service
+            async with httpx.AsyncClient() as client:
+                url = f"{self.base_url}/market-data/historical/{args.symbol}"
+                params = {
+                    "period": args.period,
+                    "interval": args.interval,
+                }
+
+                response = await client.get(url, params=params, timeout=30.0)
+                response.raise_for_status()
+
+                data = response.json()
+
+                # Extract data and metadata from the response
+                market_data = data.get("data", [])
+                metadata = data.get("metadata", {})
+
+                # Update metadata with query time
+                metadata["query_time_ms"] = (time.time() - start_time) * 1000
+
+                return MarketDataResult(
+                    symbol=args.symbol, data=market_data, metadata=metadata
+                )
+
+        except Exception as e:
+            # Fall back to mock data if service is unavailable
+            print(f"Warning: OpenBB service unavailable ({e}), using mock data")
+            return self._get_mock_data(args, start_time)
+
+    def _get_mock_data(
+        self, args: MarketDataArgs, start_time: float
+    ) -> MarketDataResult:
+        """Generate mock data as fallback."""
         mock_data = [
             {
                 "date": "2024-01-15",
@@ -91,6 +125,7 @@ class OpenBBTool(BaseTool[MarketDataArgs, MarketDataResult]):
             "timezone": "US/Eastern",
             "last_updated": "2024-01-15T16:00:00Z",
             "query_time_ms": (time.time() - start_time) * 1000,
+            "source": "mock_data",
         }
 
         return MarketDataResult(symbol=args.symbol, data=mock_data, metadata=metadata)
