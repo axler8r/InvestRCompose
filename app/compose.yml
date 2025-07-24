@@ -26,9 +26,25 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-placeholder-key}
       - MODEL_NAME=${OPENAI_MODEL_NAME:-gpt-4o-mini}
       - DATA_API_URL=${DATA_API_URL:-http://data-api:8000}
-      - OPENBB_API_URL=${OPENBB_API_URL:-http://openbb-api:8000}
+      - OPENBB_API_URL=${OPENBB_API_URL:-http://openbb-api:8001}
       - PRINT_API_URL=${PRINT_API_URL:-http://print-api:8000}
       - ANALYSIS_API_URL=${ANALYSIS_API_URL:-http://analysis-api:8000}
+    depends_on:
+      - openbb-api
+    networks:
+      - investr-network
+    env_file:
+      - .env
+
+  openbb-api:
+    build:
+      context: ..
+      dockerfile: app/services/openbb/Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - PORT=8001
+      - HOST=0.0.0.0
     networks:
       - investr-network
     env_file:
