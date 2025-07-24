@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Investment Research Agent</title>
+    <!-- Markdown parser for rendering agent responses -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.2/marked.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -61,6 +63,54 @@
         .message.agent {
             background-color: #ecf0f1;
             color: #2c3e50;
+        }
+
+        /* Markdown styles for agent messages */
+        .message.agent h1, .message.agent h2, .message.agent h3 {
+            margin: 0.5rem 0;
+            color: #2c3e50;
+        }
+
+        .message.agent h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-bottom: 1px solid #bdc3c7;
+            padding-bottom: 0.25rem;
+        }
+
+        .message.agent ul, .message.agent ol {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+
+        .message.agent li {
+            margin: 0.25rem 0;
+        }
+
+        .message.agent strong {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+
+        .message.agent code {
+            background-color: #f8f9fa;
+            padding: 0.125rem 0.25rem;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9rem;
+        }
+
+        .message.agent blockquote {
+            border-left: 3px solid #3498db;
+            margin: 0.5rem 0;
+            padding-left: 1rem;
+            font-style: italic;
+            color: #5a6c7d;
+        }
+
+        .message.agent p {
+            margin: 0.5rem 0;
+            line-height: 1.4;
         }
 
         .message .timestamp {
@@ -159,8 +209,11 @@
             
             const timeStr = timestamp ? new Date(timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
             
+            // Render markdown for agent messages, plain text for user messages
+            const messageContent = isUser ? content : marked.parse(content);
+            
             messageDiv.innerHTML = `
-                <div>${content}</div>
+                <div>${messageContent}</div>
                 <div class="timestamp">${timeStr}</div>
             `;
             
