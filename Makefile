@@ -89,3 +89,7 @@ check: lint format ## Run code quality checks
 test: ## Run tests using pytest
 	@echo "Running tests..."
 	$(PYTHON) -m pytest $(TEST_DIR)
+
+cli: ## Run the interactive CLI application
+	@echo "Starting CLI application..."
+	$(PYTHON) -m investr.cli.app

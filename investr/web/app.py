@@ -65,6 +65,9 @@ class WebApp:
                         "status": response.status.value,
                         "timestamp": response.timestamp.isoformat(),
                         "session_id": response.session_id,
+                        "tool_calls": response.tool_calls or [],
+                        "references": response.references or [],
+                        "metadata": response.metadata or {},
                     }
                 )
 
