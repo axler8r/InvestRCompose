@@ -61,6 +61,8 @@ class InvestmentAgent:
             tools=tools,
             system_message=system_message,
             description="An AI assistant specialized in investment research and analysis",
+            reflect_on_tool_use=True,  # Enable tool result synthesis
+            model_client_stream=True,  # Enable streaming for proper response flow
         )
 
     @classmethod

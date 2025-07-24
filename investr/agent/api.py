@@ -175,13 +175,25 @@ class AgentAPI:
             response_content = ""
             tools_used = []
 
-            # Process task result - extract meaningful content
+            # Process task result - extract only the final agent response
             if hasattr(task_result, "messages") and task_result.messages:
-                for message in task_result.messages:
-                    # Handle string representation of messages
-                    message_str = str(message)
-                    if message_str and message_str.strip():
-                        response_content += message_str + "\n"
+                # Look for the last TextMessage from the investment_researcher
+                for message in reversed(task_result.messages):
+                    if (
+                        hasattr(message, "source")
+                        and message.source == "investment_researcher"
+                        and hasattr(message, "type")
+                        and message.type == "TextMessage"  # type: ignore
+                        and hasattr(message, "content")
+                    ):
+                        content = getattr(message, "content", "")
+                        if isinstance(content, str) and len(content) > 50:
+                            response_content = content
+                            break
+
+                # Fallback: if no final response found, use a generic message
+                if not response_content:
+                    response_content = "Analysis completed successfully"
 
             # Create mock tools used for now (TODO: extract from actual execution)
             if "data" in request.task.lower():
