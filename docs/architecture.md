@@ -18,19 +18,24 @@ InvestR Compose (Docker Compose) - Current Implementation
 ├── Agent API (FastAPI + AutoGen + OpenAI) ✓ IMPLEMENTED
 │   ├── Interacts with OpenAI LLM (gpt-4o-mini)
 │   ├── Executes agentic workflows using AutoGen framework
-│   ├── Contains integrated tools (mock data currently):
-│   │   ├── DataTool - semantic search capabilities
-│   │   ├── OpenBBTool - market data retrieval
-│   │   ├── PrintTool - report generation
-│   │   └── AnalysisTool - financial analysis
+│   ├── Contains HTTP client tools:
+│   │   ├── DataTool - semantic search capabilities (mock data)
+│   │   ├── OpenBBTool - market data retrieval via OpenBB API ✓
+│   │   ├── PrintTool - report generation (mock data)
+│   │   └── AnalysisTool - financial analysis (mock data)
 │   └── Streaming and standard response endpoints
 │
 ├── CLI Interface ✓ IMPLEMENTED
 │   └── Command-line client for agent interaction
 │
-└── Future Services (Tool Integration Points):
+├── OpenBB API (FastAPI + OpenBB Platform SDK) ✓ IMPLEMENTED
+│   ├── Real-time market data via OpenBB Platform
+│   ├── Historical price data and financial metrics
+│   ├── RESTful endpoints with proper error handling
+│   └── Graceful fallback to mock data when SDK unavailable
+│
+└── Future Services:
     ├── Data API (FastAPI + MongoDB + Chroma) - PLANNED
-    ├── OpenBB API (FastAPI + OpenBB) - PLANNED
     ├── Print API (FastAPI + Markdown Utils + ReportLab) - PLANNED
     └── Analysis API (FastAPI) - PLANNED
 ```
@@ -58,18 +63,28 @@ InvestR Compose (Docker Compose) - Current Implementation
 - **Session Management**: Persistent session handling
 - **Development Tool**: Useful for testing and automation
 
-### Integrated Tools (Current Mock Implementation)
-These tools are implemented within the Agent API and return mock data:
+### OpenBB API (FastAPI + OpenBB Platform SDK) ✓ IMPLEMENTED
+- **Real Market Data**: Integration with OpenBB Platform SDK v4.4.5
+- **REST Endpoints**: `/health`, `/market-data/historical/{symbol}`, `/market-data/quote/{symbol}`, `/market-data/batch`
+- **LLM-Driven Parameters**: Automatically extracts symbol, period, interval from natural language
+- **Error Handling**: Graceful fallback to mock data when SDK unavailable
+- **Lazy Loading**: OpenBB SDK imported only when needed for container resilience
+- **Type Safety**: Pydantic models with Literal types for provider validation
+- **Multi-Provider Support**: yfinance, fmp, intrinio, polygon, tiingo providers
+
+### Agent Tools (HTTP Client Implementation)
+These tools are implemented within the Agent API and make HTTP calls to microservices:
 
 #### DataTool - `search_data`
 - **Purpose**: Semantic search over investment documents and data
 - **Status**: Mock implementation with structured sample data
 - **Future**: Will integrate with Data API (MongoDB + Chroma)
 
-#### OpenBBTool - `get_market_data`
+#### OpenBBTool - `get_market_data` ✓ IMPLEMENTED
 - **Purpose**: Real-time and historical market data retrieval
-- **Status**: Mock implementation with sample market data
-- **Future**: Will integrate with OpenBB API service
+- **Status**: HTTP client calling OpenBB API service with real market data
+- **Integration**: Fully functional with OpenBB Platform SDK via microservice
+- **Features**: LLM parameter extraction, provider selection, error handling
 
 #### PrintTool - `generate_report`
 - **Purpose**: Professional report generation in multiple formats
@@ -89,11 +104,6 @@ These services are designed but not yet implemented as separate containers:
 - User session and conversation history storage in MongoDB
 - Document indexing and retrieval capabilities
 
-#### OpenBB API (FastAPI + OpenBB) - PLANNED
-- Real-time market data via OpenBB SDK
-- Historical price data and financial metrics
-- Company fundamental data and news feeds
-
 #### Print API (FastAPI + Markdown Utils + ReportLab) - PLANNED
 - Professional document generation from structured data
 - Multiple output formats (PDF, HTML, Markdown)
@@ -110,21 +120,26 @@ flowchart TD
     A[Web UI - Flask]
     B[Agent API - FastAPI + AutoGen]
     C[CLI Interface]
+    O[OpenBB API - FastAPI + OpenBB SDK]
 
     %% Current Implementation (Solid lines)
     A -->|REST API| B
     C -->|REST API| B
     B -->|OpenAI API| G[OpenAI LLM]
+    B -->|HTTP API| O
 
-    %% Integrated Tools (Dashed lines - Mock Data)
+    %% Agent Tools (Mixed implementation)
     B -.->|Mock Data| T1[DataTool]
-    B -.->|Mock Data| T2[OpenBBTool]
+    B -->|HTTP Calls| T2[OpenBBTool]
     B -.->|Mock Data| T3[PrintTool]
     B -.->|Mock Data| T4[AnalysisTool]
 
+    %% OpenBB Service Integration (Solid lines)
+    T2 -->|REST API| O
+    O -->|SDK Calls| OBB[OpenBB Platform SDK]
+
     %% Future Services (Dotted lines)
     T1 -.->|Future| D[Data API + MongoDB + Chroma]
-    T2 -.->|Future| O[OpenBB API + SDK]
     T3 -.->|Future| P[Print API + ReportLab]
     T4 -.->|Future| An[Analysis API]
 
@@ -133,8 +148,9 @@ flowchart TD
     classDef planned fill:#fff3cd,stroke:#856404,stroke-width:2px
     classDef external fill:#f8d7da,stroke:#721c24,stroke-width:2px
 
-    class A,B,C,T1,T2,T3,T4 implemented
-    class D,O,P,An planned
+    class A,B,C,O,T2,OBB implemented
+    class T1,T3,T4 planned
+    class D,P,An planned
     class G external
 ```
 
@@ -180,9 +196,9 @@ InvestRCompose/
 |   │   └── schemas.py             # Common Pydantic models
 |   ├── data/                      # 🚧 Placeholder for Data API
 |   ├── openbb/                    # ✓ OpenBB API service
-|   │   ├── __init__.py           # Package exports
-|   │   ├── api.py                # FastAPI service endpoints
-|   │   └── openbb_client.py      # OpenBB Platform integration
+|   │   ├── __init__.py            # Package exports
+|   │   ├── api.py                 # FastAPI service endpoints
+|   │   └── openbb_client.py       # OpenBB Platform integration
 |   ├── print/                     # 🚧 Placeholder for Print API
 |   └── analysis/                  # 🚧 Placeholder for Analysis API
 ├── tests/                         # ✓ Test suite (12/12 tests passing)
@@ -222,8 +238,13 @@ InvestRCompose/
 The `app/compose.yml` currently defines three services:
 - **web**: Flask application (port 5000)
 - **agent**: Agent API service (port 8000)
-- **openbb-api**: OpenBB API service (port 8001) ✓ NEW
+- **openbb-api**: OpenBB API service (port 8001) ✓ IMPLEMENTED
 - **Network**: `investr-network` for service communication
+
+**Service Dependencies:**
+- Web UI → Agent API
+- Agent API → OpenBB API
+- All services communicate via `investr-network` bridge network
 
 
 ## Next Steps
@@ -240,11 +261,14 @@ The `app/compose.yml` currently defines three services:
   - MongoDB integration for session storage
   - Chroma vector database for semantic search
   - RESTful endpoints replacing mock data
-- [x] **OpenBB API Service**: Extract OpenBBTool into separate service ✓
-  - OpenBB SDK integration for real market data
-  - FastAPI service with REST endpoints
-  - Graceful fallback to mock data when service unavailable
-  - Docker containerization complete
+- [x] **OpenBB API Service**: Extract OpenBBTool into separate service ✓ COMPLETE
+  - OpenBB Platform SDK v4.4.5 integration for real market data
+  - FastAPI service with REST endpoints (/health, /market-data/*)
+  - LLM-driven parameter extraction (symbol, period, interval, provider)
+  - Graceful fallback to mock data when SDK unavailable
+  - Docker containerization with multi-stage builds
+  - HTTP client integration in agent tools
+  - Type safety with Pydantic models and Literal types
 
 ### Phase 3: Advanced Services (🔮 Planned)
 - [ ] **Print API Service**: Document generation service
