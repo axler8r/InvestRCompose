@@ -21,7 +21,7 @@ class InvestmentAgent:
         cls,
         model_client: ChatCompletionClient,
         data_api_url: str = "http://data-api:8000",
-        openbb_api_url: str = "http://openbb-api:8000",
+        openbb_api_url: str = "http://openbb-api:8001",
         print_api_url: str = "http://print-api:8000",
         analysis_api_url: str = "http://analysis-api:8000",
         system_message: Optional[str] = None,
@@ -69,7 +69,7 @@ class InvestmentAgent:
     def create_workbench(
         cls,
         data_api_url: str = "http://data-api:8000",
-        openbb_api_url: str = "http://openbb-api:8000",
+        openbb_api_url: str = "http://openbb-api:8001",
         print_api_url: str = "http://print-api:8000",
         analysis_api_url: str = "http://analysis-api:8000",
     ) -> StaticWorkbench:

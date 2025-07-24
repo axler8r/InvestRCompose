@@ -29,7 +29,7 @@ class AgentAPI:
         openai_api_key: str,
         model_name: str = "gpt-4o-mini",
         data_api_url: str = "http://data-api:8000",
-        openbb_api_url: str = "http://openbb-api:8000",
+        openbb_api_url: str = "http://openbb-api:8001",
         print_api_url: str = "http://print-api:8000",
         analysis_api_url: str = "http://analysis-api:8000",
     ):
@@ -122,7 +122,9 @@ class AgentAPI:
                 "https://sec.gov/edgar/searchedgar/companysearch.html",
                 "https://finance.yahoo.com",
                 "https://www.investopedia.com/terms/",
-            ] if tool_calls else [],  # Add mock references when tools are used
+            ]
+            if tool_calls
+            else [],  # Add mock references when tools are used
             metadata={
                 "execution_time_ms": internal_response.total_execution_time_ms,
                 "token_usage": internal_response.token_usage,
@@ -202,7 +204,18 @@ class AgentAPI:
             # Create mock tools used for now (TODO: extract from actual execution)
             # Add mock tools for common investment research queries
             task_lower = request.task.lower()
-            if any(keyword in task_lower for keyword in ["stock", "data", "company", "analysis", "market", "investment", "financial"]):
+            if any(
+                keyword in task_lower
+                for keyword in [
+                    "stock",
+                    "data",
+                    "company",
+                    "analysis",
+                    "market",
+                    "investment",
+                    "financial",
+                ]
+            ):
                 tools_used.append(
                     ToolResult(
                         tool_name="search_data",
@@ -212,9 +225,12 @@ class AgentAPI:
                         error_message=None,
                     )
                 )
-                
+
                 # Add market data tool for stock-related queries
-                if any(keyword in task_lower for keyword in ["stock", "market", "price", "trading"]):
+                if any(
+                    keyword in task_lower
+                    for keyword in ["stock", "market", "price", "trading"]
+                ):
                     tools_used.append(
                         ToolResult(
                             tool_name="get_market_data",
@@ -273,7 +289,7 @@ def create_app(
     openai_api_key: str,
     model_name: str = "gpt-4o-mini",
     data_api_url: str = "http://data-api:8000",
-    openbb_api_url: str = "http://openbb-api:8000",
+    openbb_api_url: str = "http://openbb-api:8001",
     print_api_url: str = "http://print-api:8000",
     analysis_api_url: str = "http://analysis-api:8000",
 ) -> FastAPI:
