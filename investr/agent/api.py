@@ -28,7 +28,7 @@ class AgentAPI:
         self,
         openai_api_key: str,
         model_name: str = "gpt-4o-mini",
-        data_api_url: str = "http://data-api:8000",
+        data_api_url: str = "http://data-api:8002",
         openbb_api_url: str = "http://openbb-api:8001",
         print_api_url: str = "http://print-api:8000",
         analysis_api_url: str = "http://analysis-api:8000",
@@ -57,6 +57,10 @@ class AgentAPI:
             print_api_url=print_api_url,
             analysis_api_url=analysis_api_url,
         )
+
+        # Create DataTool for conversation storage
+        from .tools.data_tool import DataTool
+        self.data_tool = DataTool(data_api_base_url=data_api_url)
 
     def _convert_user_request_to_agent_request(
         self, user_request: UserRequest
@@ -144,11 +148,41 @@ class AgentAPI:
             HTTPException: If request processing fails
 
         """
+        # Store user message in conversation
+        if self.data_tool:
+            await self.data_tool.store_conversation_message(
+                session_id=user_request.session_id,
+                role="user",
+                content=user_request.message,
+            )
+
         # Convert to internal format
         agent_request = self._convert_user_request_to_agent_request(user_request)
 
         # Process with existing method
         internal_response = await self.process_request(agent_request)
+
+        # Store assistant response in conversation
+        if self.data_tool:
+            # Extract tool calls from internal response
+            tool_calls = []
+            if internal_response.tools_used:
+                tool_calls = [
+                    {
+                        "tool": tool.tool_name,
+                        "success": tool.success,
+                        "result": tool.result,
+                        "execution_time_ms": tool.execution_time_ms,
+                    }
+                    for tool in internal_response.tools_used
+                ]
+
+            await self.data_tool.store_conversation_message(
+                session_id=user_request.session_id,
+                role="assistant",
+                content=internal_response.response,
+                tool_calls=tool_calls if tool_calls else None,
+            )
 
         # Convert back to common schema
         return self._convert_internal_response_to_agent_response(
@@ -288,7 +322,7 @@ class AgentAPI:
 def create_app(
     openai_api_key: str,
     model_name: str = "gpt-4o-mini",
-    data_api_url: str = "http://data-api:8000",
+    data_api_url: str = "http://data-api:8002",
     openbb_api_url: str = "http://openbb-api:8001",
     print_api_url: str = "http://print-api:8000",
     analysis_api_url: str = "http://analysis-api:8000",
