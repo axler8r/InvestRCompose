@@ -18,8 +18,9 @@ InvestR Compose (Docker Compose) - Current Implementation
 ├── Agent API (FastAPI + AutoGen + OpenAI) ✓ IMPLEMENTED
 │   ├── Interacts with OpenAI LLM (gpt-4o-mini)
 │   ├── Executes agentic workflows using AutoGen framework
+│   ├── Automatic conversation storage with session management
 │   ├── Contains HTTP client tools:
-│   │   ├── DataTool - semantic search capabilities (mock data)
+│   │   ├── DataTool - semantic search capabilities + conversation storage ✓
 │   │   ├── OpenBBTool - market data retrieval via OpenBB API ✓
 │   │   ├── PrintTool - report generation (mock data)
 │   │   └── AnalysisTool - financial analysis (mock data)
@@ -35,7 +36,7 @@ InvestR Compose (Docker Compose) - Current Implementation
 │   └── Graceful fallback to mock data when SDK unavailable
 │
 └── Future Services:
-    ├── Data API (FastAPI + MongoDB + Chroma) - PLANNED
+    ├── Data API (FastAPI + MongoDB + Chroma) ✓ IMPLEMENTED
     ├── Print API (FastAPI + Markdown Utils + ReportLab) - PLANNED
     └── Analysis API (FastAPI) - PLANNED
 ```
@@ -75,10 +76,12 @@ InvestR Compose (Docker Compose) - Current Implementation
 ### Agent Tools (HTTP Client Implementation)
 These tools are implemented within the Agent API and make HTTP calls to microservices:
 
-#### DataTool - `search_data`
-- **Purpose**: Semantic search over investment documents and data
-- **Status**: Mock implementation with structured sample data
-- **Future**: Will integrate with Data API (MongoDB + Chroma)
+#### DataTool - `search_data` ✓ CONVERSATION STORAGE IMPLEMENTED
+- **Purpose**: Semantic search over investment documents and conversation persistence
+- **Status**: Mock search data + fully functional conversation storage with MongoDB
+- **Features**: Store/retrieve user-agent conversations with session management
+- **Integration**: HTTP client with Data API for conversation storage endpoints
+- **Future**: Will add semantic search capabilities with Chroma integration
 
 #### OpenBBTool - `get_market_data` ✓ IMPLEMENTED
 - **Purpose**: Real-time and historical market data retrieval
@@ -96,13 +99,18 @@ These tools are implemented within the Agent API and make HTTP calls to microser
 - **Status**: Mock implementation with sample analysis results
 - **Future**: Will integrate with Analysis API
 
-### Future Microservices (Planned)
-These services are designed but not yet implemented as separate containers:
+### Future Microservices (Partially Implemented)
+These services are in various stages of implementation:
 
-#### Data API (FastAPI + MongoDB + Chroma) - PLANNED
-- Embedding storage and retrieval for efficient semantic search
-- User session and conversation history storage in MongoDB
-- Document indexing and retrieval capabilities
+### Data API (FastAPI + MongoDB + Chroma) ✓ IMPLEMENTED
+- **Conversation Storage**: Persistent user-agent conversation history in MongoDB
+- **Session Management**: Session-based conversation organization for future authentication
+- **Document Persistence**: Message storage with timestamps and tool call metadata
+- **RESTful Endpoints**: `/conversations`, `/conversations/{session_id}` with full CRUD operations
+- **Async Architecture**: Motor async MongoDB driver with Beanie ODM
+- **Type Safety**: Complete Pydantic model validation throughout storage pipeline
+- **Health Monitoring**: Database connection health checks and service monitoring
+- **Future Features**: Planned semantic search with Chroma vector database integration
 
 #### Print API (FastAPI + Markdown Utils + ReportLab) - PLANNED
 - Professional document generation from structured data
@@ -121,25 +129,29 @@ flowchart TD
     B[Agent API - FastAPI + AutoGen]
     C[CLI Interface]
     O[OpenBB API - FastAPI + OpenBB SDK]
+    D[Data API - FastAPI + MongoDB]
 
     %% Current Implementation (Solid lines)
     A -->|REST API| B
     C -->|REST API| B
     B -->|OpenAI API| G[OpenAI LLM]
     B -->|HTTP API| O
+    B -->|HTTP API| D
 
     %% Agent Tools (Mixed implementation)
-    B -.->|Mock Data| T1[DataTool]
+    B -->|Conversation Storage| T1[DataTool]
     B -->|HTTP Calls| T2[OpenBBTool]
     B -.->|Mock Data| T3[PrintTool]
     B -.->|Mock Data| T4[AnalysisTool]
 
-    %% OpenBB Service Integration (Solid lines)
+    %% Service Integration (Solid lines)
+    T1 -->|REST API| D
     T2 -->|REST API| O
     O -->|SDK Calls| OBB[OpenBB Platform SDK]
+    D -->|Async Calls| MongoDB[MongoDB Database]
 
     %% Future Services (Dotted lines)
-    T1 -.->|Future| D[Data API + MongoDB + Chroma]
+    D -.->|Future| Chroma[Chroma Vector DB]
     T3 -.->|Future| P[Print API + ReportLab]
     T4 -.->|Future| An[Analysis API]
 
@@ -148,9 +160,9 @@ flowchart TD
     classDef planned fill:#fff3cd,stroke:#856404,stroke-width:2px
     classDef external fill:#f8d7da,stroke:#721c24,stroke-width:2px
 
-    class A,B,C,O,T2,OBB implemented
-    class T1,T3,T4 planned
-    class D,P,An planned
+    class A,B,C,O,T1,T2,D,OBB,MongoDB implemented
+    class T3,T4 planned
+    class P,An,Chroma planned
     class G external
 ```
 
@@ -183,8 +195,8 @@ InvestRCompose/
 |   │   ├── agent.py               # Agent factory and configuration
 |   │   ├── models.py              # Pydantic data models
 |   │   └── tools/                 # AutoGen tool implementations
-|   │       ├── data_tool.py       # Mock data search tool
-|   │       ├── openbb_tool.py     # Mock market data tool
+|   │       ├── data_tool.py        # Data search + conversation storage tool ✓
+|   │       ├── openbb_tool.py     # Market data tool via OpenBB API ✓
 |   │       ├── print_tool.py      # Mock report generation tool
 |   │       └── analysis_tool.py   # Mock analysis tool
 |   ├── web/                       # ✓ Flask web application
@@ -194,7 +206,11 @@ InvestRCompose/
 |   │   └── app.py                 # CLI client implementation
 |   ├── common/                    # ✓ Shared schemas and utilities
 |   │   └── schemas.py             # Common Pydantic models
-|   ├── data/                      # 🚧 Placeholder for Data API
+|   ├── data/                      # ✓ Data API service (conversation storage)
+|   │   ├── __init__.py            # Package exports
+|   │   ├── api.py                 # FastAPI conversation storage endpoints
+|   │   ├── models.py              # Beanie ODM models for MongoDB
+|   │   └── database.py            # MongoDB async client and health checks
 |   ├── openbb/                    # ✓ OpenBB API service
 |   │   ├── __init__.py            # Package exports
 |   │   ├── api.py                 # FastAPI service endpoints
@@ -203,7 +219,7 @@ InvestRCompose/
 |   └── analysis/                  # 🚧 Placeholder for Analysis API
 ├── tests/                         # ✓ Test suite (12/12 tests passing)
 └── app/                           # ✓ Docker deployment configuration
-    ├── compose.yml                # Current: web + agent services
+    ├── compose.yml                # Current: web + agent + data + openbb services
     ├── .env                       # Environment configuration
     ├── .env.example               # Environment template
     └── services/                  # Service-specific Dockerfiles
@@ -211,7 +227,8 @@ InvestRCompose/
         │   └── Dockerfile         # ✓ Flask web service
         ├── agent/
         │   └── Dockerfile         # ✓ Agent API service
-        ├── data/                  # 🚧 Future Data API service
+        ├── data/                  # ✓ Data API service (conversation storage)
+        │   └── Dockerfile         # ✓ Data API service
         ├── openbb/                # ✓ OpenBB API service
         │   └── Dockerfile         # ✓ OpenBB API service
         ├── print/                 # 🚧 Future Print API service
@@ -235,15 +252,19 @@ InvestRCompose/
 - This allows services to import from the shared `investr` Python package
 
 ### Current Docker Compose Setup
-The `app/compose.yml` currently defines three services:
+The `app/compose.yml` currently defines five services:
 - **web**: Flask application (port 5000)
 - **agent**: Agent API service (port 8000)
+- **data-api**: Data API service with conversation storage (port 8002) ✓ IMPLEMENTED
 - **openbb-api**: OpenBB API service (port 8001) ✓ IMPLEMENTED
+- **mongodb**: MongoDB database for conversation persistence (port 27017) ✓ IMPLEMENTED
 - **Network**: `investr-network` for service communication
 
 **Service Dependencies:**
 - Web UI → Agent API
-- Agent API → OpenBB API
+- Agent API → Data API (conversation storage)
+- Agent API → OpenBB API (market data)
+- Data API → MongoDB (document persistence)
 - All services communicate via `investr-network` bridge network
 
 
@@ -256,11 +277,17 @@ The `app/compose.yml` currently defines three services:
 - [x] **Type Safety**: Complete Pydantic model coverage
 - [x] **Docker Setup**: Containerized web and agent services
 
-### Phase 2: Service Extraction (🚧 In Progress)
-- [ ] **Data API Service**: Extract DataTool into standalone FastAPI service
-  - MongoDB integration for session storage
-  - Chroma vector database for semantic search
-  - RESTful endpoints replacing mock data
+### Phase 2: Conversation Storage (✓ Complete)
+- [x] **Data API Service**: Standalone FastAPI service with conversation storage
+- [x] **MongoDB Integration**: Async document storage with Beanie ODM
+- [x] **Session Management**: Session-based conversation organization
+- [x] **Agent Integration**: Automatic conversation capture in agent workflows
+- [x] **Tool Call Metadata**: Capture and store tool execution details
+- [x] **RESTful Endpoints**: Full CRUD operations for conversation management
+- [x] **Docker Orchestration**: Multi-service Docker Compose with persistent volumes
+- [x] **Type Safety**: Complete Pydantic validation throughout storage pipeline
+
+### Phase 3: Service Extraction (🚧 In Progress)
 - [x] **OpenBB API Service**: Extract OpenBBTool into separate service ✓ COMPLETE
   - OpenBB Platform SDK v4.4.5 integration for real market data
   - FastAPI service with REST endpoints (/health, /market-data/*)
@@ -269,8 +296,18 @@ The `app/compose.yml` currently defines three services:
   - Docker containerization with multi-stage builds
   - HTTP client integration in agent tools
   - Type safety with Pydantic models and Literal types
+- [ ] **Semantic Search Enhancement**: Add Chroma vector database to Data API
+  - Vector embeddings for document search
+  - Semantic search capabilities
+  - Integration with existing conversation storage
 
-### Phase 3: Advanced Services (🔮 Planned)
+### Phase 4: Advanced Services (🔮 Planned)
+- [ ] **Print API Service**: Document generation service
+  - ReportLab for PDF generation
+  - Markdown to HTML conversion
+  - Template management system
+- [ ] **Analysis API Service**: Financial analysis service
+### Phase 4: Advanced Services (🔮 Planned)
 - [ ] **Print API Service**: Document generation service
   - ReportLab for PDF generation
   - Markdown to HTML conversion
@@ -280,8 +317,8 @@ The `app/compose.yml` currently defines three services:
   - Risk assessment models
   - Portfolio optimization tools
 
-### Phase 4: Production Readiness (🔮 Future)
-- [ ] **Authentication & Security**: API key management, user authentication
-- [ ] **Monitoring & Observability**: Logging, metrics, health checks
+### Phase 5: Production Readiness (🔮 Future)
+- [ ] **Authentication & Security**: User authentication, session-based auth integration
+- [ ] **Monitoring & Observability**: Logging, metrics, comprehensive health checks
 - [ ] **Performance Optimization**: Caching, connection pooling, async improvements
 - [ ] **Documentation**: OpenAPI specs, integration guides, deployment docs

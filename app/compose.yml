@@ -25,12 +25,13 @@ services:
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-placeholder-key}
       - MODEL_NAME=${OPENAI_MODEL_NAME:-gpt-4o-mini}
-      - DATA_API_URL=${DATA_API_URL:-http://data-api:8000}
+      - DATA_API_URL=${DATA_API_URL:-http://data-api:8002}
       - OPENBB_API_URL=${OPENBB_API_URL:-http://openbb-api:8001}
       - PRINT_API_URL=${PRINT_API_URL:-http://print-api:8000}
       - ANALYSIS_API_URL=${ANALYSIS_API_URL:-http://analysis-api:8000}
     depends_on:
       - openbb-api
+      - data-api
     networks:
       - investr-network
     env_file:
@@ -50,6 +51,38 @@ services:
     env_file:
       - .env
 
+  data-api:
+    build:
+      context: ..
+      dockerfile: app/services/data/Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - PORT=8002
+      - HOST=0.0.0.0
+      - MONGODB_URL=mongodb://mongodb:27017
+      - MONGODB_DATABASE=investr
+    depends_on:
+      - mongodb
+    networks:
+      - investr-network
+    env_file:
+      - .env
+
+  mongodb:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=investr
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - investr-network
+
 networks:
   investr-network:
     driver: bridge
+
+volumes:
+  mongodb_data:

@@ -1,7 +1,8 @@
-"""Data API tool for investment research agent."""
+"""Data API tool for investment research agent and conversation storage."""
 
 import time
 
+import httpx
 from autogen_core import CancellationToken
 from autogen_core.tools import BaseTool
 
@@ -13,9 +14,10 @@ class DataTool(BaseTool[DataSearchArgs, DataSearchResult]):
 
     This tool provides semantic search capabilities over stored investment data,
     including company information, financial statements, and market research.
+    Also handles conversation storage and retrieval for session persistence.
     """
 
-    def __init__(self, data_api_base_url: str = "http://data-api:8000"):
+    def __init__(self, data_api_base_url: str = "http://data-api:8002"):
         """Initialize the data tool.
 
         Args:
@@ -32,7 +34,8 @@ class DataTool(BaseTool[DataSearchArgs, DataSearchResult]):
                 "and other investment-related documents."
             ),
         )
-        self.base_url = data_api_base_url
+        self.base_url = data_api_base_url.rstrip("/")
+        self.client = httpx.AsyncClient(timeout=30.0)
 
     async def run(
         self, args: DataSearchArgs, cancellation_token: CancellationToken
@@ -49,45 +52,124 @@ class DataTool(BaseTool[DataSearchArgs, DataSearchResult]):
         """
         start_time = time.time()
 
-        # TODO: Implement actual HTTP client call to Data API
-        # For now, return mock data to establish the interface
-        mock_results = [
-            {
-                "id": "doc_1",
-                "title": f"Investment Analysis for {args.query}",
-                "content": f"This is a mock result for query: {args.query}",
-                "relevance_score": 0.95,
-                "source": "mock_database",
-                "metadata": {
-                    "company": args.query,
-                    "sector": "Technology",
-                    "date_created": "2024-01-15",
+        try:
+            # For now, return mock data since we haven't implemented search endpoint yet
+            # TODO: Implement semantic search endpoint in Data API
+            mock_results = [
+                {
+                    "id": "doc_1",
+                    "title": f"Investment Analysis for {args.query}",
+                    "content": f"This is a mock result for query: {args.query}",
+                    "relevance_score": 0.95,
+                    "source": "mock_database",
+                    "metadata": {
+                        "company": args.query,
+                        "sector": "Technology",
+                        "date_created": "2024-01-15",
+                    },
                 },
-            },
-            {
-                "id": "doc_2",
-                "title": f"Market Research: {args.query} Sector Analysis",
-                "content": f"Comprehensive analysis of {args.query} market trends",
-                "relevance_score": 0.87,
-                "source": "mock_database",
-                "metadata": {
-                    "sector": "Technology",
-                    "report_type": "market_analysis",
-                    "date_created": "2024-01-10",
+                {
+                    "id": "doc_2", 
+                    "title": f"Market Research: {args.query} Sector Analysis",
+                    "content": f"Comprehensive analysis of {args.query} market trends",
+                    "relevance_score": 0.87,
+                    "source": "mock_database",
+                    "metadata": {
+                        "sector": "Technology",
+                        "report_type": "market_analysis",
+                        "date_created": "2024-01-10",
+                    },
                 },
-            },
-        ]
+            ]
 
-        # Limit results based on args.limit
-        limited_results = mock_results[: args.limit]
+            # Limit results based on args.limit
+            limited_results = mock_results[: args.limit]
 
-        query_time = (time.time() - start_time) * 1000  # Convert to milliseconds
+            query_time = (time.time() - start_time) * 1000  # Convert to milliseconds
 
-        return DataSearchResult(
-            results=limited_results,
-            total_count=len(mock_results),
-            query_time_ms=query_time,
-        )
+            return DataSearchResult(
+                results=limited_results,
+                total_count=len(mock_results),
+                query_time_ms=query_time,
+            )
+
+        except Exception:
+            # Return empty results on error
+            query_time = (time.time() - start_time) * 1000
+            return DataSearchResult(
+                results=[],
+                total_count=0,
+                query_time_ms=query_time,
+            )
+
+    async def store_conversation_message(
+        self, session_id: str, role: str, content: str, tool_calls: list | None = None
+    ) -> bool:
+        """Store a message in the conversation.
+
+        Args:
+            session_id: Unique session identifier
+            role: Message role ('user' or 'assistant')
+            content: Message content
+            tool_calls: Optional list of tool calls made
+
+        Returns:
+            True if successful, False otherwise
+
+        """
+        try:
+            message_data = {
+                "role": role,
+                "content": content,
+                "tool_calls": tool_calls,
+            }
+            
+            request_data = {
+                "session_id": session_id,
+                "message": message_data,
+            }
+
+            response = await self.client.post(
+                f"{self.base_url}/conversations",
+                json=request_data,
+            )
+            
+            return response.status_code == 200
+
+        except Exception:
+            return False
+
+    async def get_conversation_history(self, session_id: str) -> list:
+        """Retrieve conversation history for a session.
+
+        Args:
+            session_id: Unique session identifier
+
+        Returns:
+            List of messages in the conversation
+
+        """
+        try:
+            response = await self.client.get(
+                f"{self.base_url}/conversations/{session_id}"
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                return data.get("messages", [])
+            else:
+                return []
+
+        except Exception:
+            return []
+
+    async def __aenter__(self):
+        """Async context manager entry."""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit."""
+        await self.client.aclose()
 
     def return_value_as_string(self, value: DataSearchResult) -> str:
         """Convert the search result to a string representation.

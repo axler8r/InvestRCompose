@@ -12,7 +12,7 @@ TEST_DIR := tests
 
 
 # phony ------------------------------------------------------------->8---------
-.PHONY: help install up down start stop restart clean lint format check test requirements build status logs
+.PHONY: help install up down start stop restart clean lint format check test requirements build status logs mongosh
 
 
 # default target ---------------------------------------------------->8---------
@@ -65,6 +65,10 @@ status: ## Show the status of Docker containers
 logs: ## Show logs of Docker containers
 	@echo "Showing logs of Docker containers..."
 	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) logs --follow
+
+mongosh: ## Connect to MongoDB shell
+	@echo "Connecting to MongoDB shell..."
+	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) exec mongodb mongosh investr
 
 clean: down ## Clean up Docker containers and images
 	@echo "Cleaning up Docker containers and images..."
