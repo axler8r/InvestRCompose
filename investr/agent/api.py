@@ -243,7 +243,7 @@ class AgentAPI:
 
             # Create mock tools used for now (TODO: extract from actual execution)
             # Add mock tools for common investment research queries
-            task_lower = request.task.lower()
+            task_lower: str = request.task.lower()
             if any(
                 keyword in task_lower
                 for keyword in [

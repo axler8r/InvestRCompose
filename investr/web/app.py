@@ -36,9 +36,7 @@ class WebApp:
             return render_template("index.html")
 
         @self.app.route("/api/chat", methods=["POST"])
-        def chat() -> (
-            tuple[Response, Literal[400]] | Response | tuple[Response, Literal[500]]
-        ):
+        def chat() -> tuple[Response, int] | Response:
             """Handle chat messages from the frontend."""
             try:
                 data = request.get_json()

@@ -31,7 +31,7 @@ class PrintTool(BaseTool[ReportGenerationArgs, ReportGenerationResult]):
                 "Supports custom templates and styling for professional document output."
             ),
         )
-        self.base_url = print_api_base_url
+        self.base_url: str = print_api_base_url
 
     async def run(
         self, args: ReportGenerationArgs, cancellation_token: CancellationToken

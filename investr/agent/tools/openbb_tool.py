@@ -61,7 +61,7 @@ class OpenBBTool(BaseTool[MarketDataArgs, MarketDataResult]):
                     "interval": args.interval,
                 }
 
-                response: Response = await client.get(url, params=params, timeout=30.0)
+                response = await client.get(url, params=params, timeout=30.0)
                 response.raise_for_status()
 
                 data = response.json()
