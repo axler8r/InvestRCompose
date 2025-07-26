@@ -8,12 +8,12 @@ RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy project files
-COPY . /app
-
 # Install Python dependencies
 COPY ./app/requirements.txt .
 RUN pip install --requirement requirements.txt
+
+# Copy project files
+COPY . /app
 
 # Set environment variables
 ENV PORT=8001
