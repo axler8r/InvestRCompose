@@ -6,8 +6,8 @@ from datetime import datetime
 from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse
 
-from .database import mongodb_client
-from .models import (
+from investr.data.database import mongodb_client
+from investr.data.models import (
     Conversation,
     ConversationHistoryResponse,
     ConversationRequest,
@@ -18,7 +18,7 @@ from .models import (
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for FastAPI application.
-    
+
     Handles startup and shutdown events for database connections.
     """
     # Startup
@@ -26,9 +26,9 @@ async def lifespan(app: FastAPI):
         await mongodb_client.connect()
     except Exception as e:
         raise RuntimeError(f"Failed to initialize database: {e}") from e
-    
+
     yield
-    
+
     # Shutdown
     await mongodb_client.disconnect()
 
@@ -55,10 +55,12 @@ def create_app() -> FastAPI:
             JSON response with service health status
 
         """
-        db_healthy = await mongodb_client.health_check()
+        db_healthy: bool = await mongodb_client.health_check()
 
         return JSONResponse(
-            status_code=status.HTTP_200_OK if db_healthy else status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=status.HTTP_200_OK
+            if db_healthy
+            else status.HTTP_503_SERVICE_UNAVAILABLE,
             content={
                 "service": "data-api",
                 "status": "healthy" if db_healthy else "unhealthy",
@@ -201,7 +203,7 @@ def create_app() -> FastAPI:
 
 
 # Create application instance
-app = create_app()
+app: FastAPI = create_app()
 
 
 if __name__ == "__main__":

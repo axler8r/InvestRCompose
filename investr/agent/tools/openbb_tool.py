@@ -1,11 +1,12 @@
 """OpenBB API tool for investment research agent."""
 
 import time
+from typing import Any, Dict
 
 from autogen_core import CancellationToken
 from autogen_core.tools import BaseTool
 
-from ..models import MarketDataArgs, MarketDataResult
+from investr.agent.models import MarketDataArgs, MarketDataResult
 
 
 class OpenBBTool(BaseTool[MarketDataArgs, MarketDataResult]):
@@ -15,7 +16,7 @@ class OpenBBTool(BaseTool[MarketDataArgs, MarketDataResult]):
     including stock prices, financial metrics, and market indicators.
     """
 
-    def __init__(self, openbb_api_base_url: str = "http://openbb-api:8001"):
+    def __init__(self, openbb_api_base_url: str = "http://openbb-api:8001") -> None:
         """Initialize the OpenBB tool.
 
         Args:
@@ -32,7 +33,7 @@ class OpenBBTool(BaseTool[MarketDataArgs, MarketDataResult]):
                 "and technical indicators."
             ),
         )
-        self.base_url = openbb_api_base_url
+        self.base_url: str = openbb_api_base_url
 
     async def run(
         self, args: MarketDataArgs, cancellation_token: CancellationToken
@@ -49,13 +50,13 @@ class OpenBBTool(BaseTool[MarketDataArgs, MarketDataResult]):
         """
         import httpx
 
-        start_time = time.time()
+        start_time: float = time.time()
 
         try:
             # Call the OpenBB API service
             async with httpx.AsyncClient() as client:
-                url = f"{self.base_url}/market-data/historical/{args.symbol}"
-                params = {
+                url: str = f"{self.base_url}/market-data/historical/{args.symbol}"
+                params: dict[str, str] = {
                     "period": args.period,
                     "interval": args.interval,
                 }
@@ -85,7 +86,7 @@ class OpenBBTool(BaseTool[MarketDataArgs, MarketDataResult]):
         self, args: MarketDataArgs, start_time: float
     ) -> MarketDataResult:
         """Generate mock data as fallback."""
-        mock_data = [
+        mock_data: list[dict[str, Any]] = [
             {
                 "date": "2024-01-15",
                 "open": 150.25,
@@ -115,7 +116,7 @@ class OpenBBTool(BaseTool[MarketDataArgs, MarketDataResult]):
             },
         ]
 
-        metadata = {
+        metadata: dict[str, Any] = {
             "symbol": args.symbol,
             "data_type": args.data_type,
             "period": args.period,
@@ -146,7 +147,7 @@ class OpenBBTool(BaseTool[MarketDataArgs, MarketDataResult]):
         result_str = f"Market data for {value.symbol}:\n\n"
 
         # Show latest data point
-        latest = value.data[0] if value.data else {}
+        latest: dict[str, Any] = value.data[0] if value.data else {}
         if latest:
             result_str += "Latest Price Information:\n"
             result_str += f"  Date: {latest.get('date', 'N/A')}\n"
@@ -158,7 +159,9 @@ class OpenBBTool(BaseTool[MarketDataArgs, MarketDataResult]):
 
         # Show summary statistics
         if len(value.data) > 1:
-            closes = [d.get("close", 0) for d in value.data if "close" in d]
+            closes: list[float] = [
+                d.get("close", 0) for d in value.data if "close" in d
+            ]
             if closes:
                 result_str += f"Summary ({len(value.data)} data points):\n"
                 result_str += f"  Average Close: ${sum(closes) / len(closes):.2f}\n"
@@ -170,14 +173,14 @@ class OpenBBTool(BaseTool[MarketDataArgs, MarketDataResult]):
                 )
 
         # Show metadata
-        metadata = value.metadata
+        metadata: Dict[str, Any] = value.metadata
         result_str += "Data Details:\n"
         result_str += f"  Exchange: {metadata.get('exchange', 'N/A')}\n"
         result_str += f"  Currency: {metadata.get('currency', 'N/A')}\n"
         result_str += f"  Period: {metadata.get('period', 'N/A')}\n"
         result_str += f"  Last Updated: {metadata.get('last_updated', 'N/A')}\n"
 
-        query_time = metadata.get("query_time_ms", 0)
+        query_time: float = metadata.get("query_time_ms", 0)
         result_str += f"  Query Time: {query_time:.1f}ms"
 
         return result_str

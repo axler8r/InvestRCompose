@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 from autogen_core import CancellationToken
 from autogen_core.tools import BaseTool
 
-from ..models import AnalysisArgs, AnalysisResult
+from investr.agent.models import AnalysisArgs, AnalysisResult
 
 
 class AnalysisTool(BaseTool[AnalysisArgs, AnalysisResult]):
@@ -15,7 +15,7 @@ class AnalysisTool(BaseTool[AnalysisArgs, AnalysisResult]):
     including statistical analysis, trend detection, and insights generation.
     """
 
-    def __init__(self, analysis_api_base_url: str = "http://analysis-api:8000"):
+    def __init__(self, analysis_api_base_url: str = "http://analysis-api:8000") -> None:
         """Initialize the analysis tool.
 
         Args:
@@ -32,7 +32,7 @@ class AnalysisTool(BaseTool[AnalysisArgs, AnalysisResult]):
                 "and automated insight generation."
             ),
         )
-        self.base_url = analysis_api_base_url
+        self.base_url: str = analysis_api_base_url
 
     async def run(
         self, args: AnalysisArgs, cancellation_token: CancellationToken
@@ -51,13 +51,15 @@ class AnalysisTool(BaseTool[AnalysisArgs, AnalysisResult]):
         # For now, return mock data to establish the interface
 
         # Mock analysis based on analysis type
-        mock_results = self._generate_mock_analysis(args)
+        mock_results: Dict[str, Any] = self._generate_mock_analysis(args)
 
         # Generate insights based on analysis type
-        insights = self._generate_mock_insights(args.analysis_type, mock_results)
+        insights: List[str] = self._generate_mock_insights(
+            args.analysis_type, mock_results
+        )
 
         # Calculate confidence score based on data quality and analysis type
-        confidence_score = self._calculate_mock_confidence(args)
+        confidence_score: float = self._calculate_mock_confidence(args)
 
         return AnalysisResult(
             analysis_type=args.analysis_type,
@@ -203,7 +205,7 @@ class AnalysisTool(BaseTool[AnalysisArgs, AnalysisResult]):
 
         # Add confidence score
         if value.confidence_score is not None:
-            confidence_pct = value.confidence_score * 100
+            confidence_pct: float = value.confidence_score * 100
             result_str += f"Confidence Score: {confidence_pct:.1f}%\n\n"
 
         # Add key results

@@ -6,7 +6,7 @@ from autogen_agentchat.agents import AssistantAgent
 from autogen_core.models import ChatCompletionClient
 from autogen_core.tools import BaseTool, StaticWorkbench
 
-from .tools import AnalysisTool, DataTool, OpenBBTool, PrintTool
+from investr.agent.tools import AnalysisTool, DataTool, OpenBBTool, PrintTool
 
 
 class InvestmentAgent:
@@ -43,7 +43,7 @@ class InvestmentAgent:
 
         """
         # Create tools
-        tools = cls._create_tools(
+        tools: list[BaseTool] = cls._create_tools(
             data_api_url=data_api_url,
             openbb_api_url=openbb_api_url,
             print_api_url=print_api_url,
@@ -85,7 +85,7 @@ class InvestmentAgent:
             Configured StaticWorkbench with investment tools
 
         """
-        tools = cls._create_tools(
+        tools: list[BaseTool] = cls._create_tools(
             data_api_url=data_api_url,
             openbb_api_url=openbb_api_url,
             print_api_url=print_api_url,

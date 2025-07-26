@@ -6,7 +6,7 @@ from typing import Optional
 from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient
 
-from .models import Conversation
+from investr.data.models import Conversation
 
 
 class MongoDBClient:

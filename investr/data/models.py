@@ -43,8 +43,8 @@ class Conversation(Document):
     class Settings:
         """Beanie document settings."""
 
-        name = "conversations"
-        indexes = [
+        name: str = "conversations"
+        indexes: List[str] = [
             "session_id",
             "user_id",
             "created_at",

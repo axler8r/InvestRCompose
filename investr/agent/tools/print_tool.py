@@ -5,7 +5,7 @@ import time
 from autogen_core import CancellationToken
 from autogen_core.tools import BaseTool
 
-from ..models import ReportGenerationArgs, ReportGenerationResult
+from investr.agent.models import ReportGenerationArgs, ReportGenerationResult
 
 
 class PrintTool(BaseTool[ReportGenerationArgs, ReportGenerationResult]):
@@ -15,7 +15,7 @@ class PrintTool(BaseTool[ReportGenerationArgs, ReportGenerationResult]):
     professional investment reports in various formats.
     """
 
-    def __init__(self, print_api_base_url: str = "http://print-api:8000"):
+    def __init__(self, print_api_base_url: str = "http://print-api:8000") -> None:
         """Initialize the print tool.
 
         Args:
@@ -31,7 +31,7 @@ class PrintTool(BaseTool[ReportGenerationArgs, ReportGenerationResult]):
                 "Supports custom templates and styling for professional document output."
             ),
         )
-        self.base_url = print_api_base_url
+        self.base_url: str = print_api_base_url
 
     async def run(
         self, args: ReportGenerationArgs, cancellation_token: CancellationToken
@@ -77,7 +77,7 @@ class PrintTool(BaseTool[ReportGenerationArgs, ReportGenerationResult]):
             Human-readable string representation of the report generation result
 
         """
-        size_mb = value.size_bytes / (1024 * 1024)
+        size_mb: float = value.size_bytes / (1024 * 1024)
 
         result_str = "Report generated successfully!\n\n"
         result_str += "Report Details:\n"
