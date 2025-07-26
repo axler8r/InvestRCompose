@@ -67,7 +67,7 @@ class TestDataTool:
 
         assert tool.name == "search_data"
         assert "search" in tool.description.lower()
-        assert tool.base_url == "http://data-api:8000"
+        assert tool.base_url == "http://data-api:8002"
 
     @pytest.mark.asyncio
     async def test_run_mock_data(self):
