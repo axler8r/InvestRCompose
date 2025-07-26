@@ -83,8 +83,8 @@ lint: ## Run linters
 
 format: ## Format code using black
 	@echo "Formatting code with black..."
-	$(RUFF) format $(SOURCE_DIR) --verbose
-	$(RUFF) format $(TEST_DIR) --verbose
+	$(RUFF) format $(SOURCE_DIR)
+	$(RUFF) format $(TEST_DIR)
 
 check: lint format ## Run code quality checks
 	@echo "Running code quality checks..."
