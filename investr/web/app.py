@@ -1,11 +1,12 @@
 """Flask web application for the Investment Research Agent."""
 
 import os
+from typing import Literal
 import uuid
 from datetime import datetime
 
 import requests
-from flask import Flask, jsonify, render_template, request, session
+from flask import Flask, Response, jsonify, render_template, request, session
 
 from investr.common.schemas import AgentResponse, RequestStatus, UserRequest
 
@@ -29,14 +30,16 @@ class WebApp:
         """Set up Flask routes."""
 
         @self.app.route("/")
-        def index():
+        def index() -> str:
             """Serve main chat interface."""
             if "session_id" not in session:
                 session["session_id"] = str(uuid.uuid4())
             return render_template("index.html")
 
         @self.app.route("/api/chat", methods=["POST"])
-        def chat():
+        def chat() -> (
+            tuple[Response, Literal[400]] | Response | tuple[Response, Literal[500]]
+        ):
             """Handle chat messages from the frontend."""
             try:
                 data = request.get_json()
@@ -57,7 +60,7 @@ class WebApp:
                 )
 
                 # Send request to agent API
-                response = self._call_agent_api(user_request)
+                response: AgentResponse = self._call_agent_api(user_request)
 
                 return jsonify(
                     {
@@ -75,7 +78,7 @@ class WebApp:
                 return jsonify({"error": f"Failed to process request: {str(e)}"}), 500
 
         @self.app.route("/api/health")
-        def health():
+        def health() -> Response:
             """Health check endpoint."""
             return jsonify(
                 {
@@ -100,7 +103,7 @@ class WebApp:
         """
         try:
             # Call the agent service API
-            response = requests.post(
+            response: requests.Response = requests.post(
                 f"{self.agent_api_url}/api/query",
                 json=user_request.model_dump(),
                 headers={"Content-Type": "application/json"},
@@ -159,15 +162,15 @@ def create_app() -> Flask:
         Configured Flask application
 
     """
-    agent_api_url = os.environ.get("AGENT_API_URL", "http://agent:8000")
+    agent_api_url: str = os.environ.get("AGENT_API_URL", "http://agent:8000")
     web_app = WebApp(agent_api_url=agent_api_url)
     return web_app.app
 
 
 if __name__ == "__main__":
-    app = create_app()
+    app: Flask = create_app()
     port = int(os.environ.get("PORT", 5000))
-    debug = os.environ.get("FLASK_ENV") == "development"
+    debug: bool = os.environ.get("FLASK_ENV") == "development"
 
     print(f"Starting Investment Research Web UI on port {port}")
     app.run(host="0.0.0.0", port=port, debug=debug)

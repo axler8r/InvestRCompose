@@ -9,7 +9,7 @@ from .data_tool import DataTool
 from .openbb_tool import OpenBBTool
 from .print_tool import PrintTool
 
-__all__ = [
+__all__: list[str] = [
     "DataTool",
     "OpenBBTool",
     "PrintTool",

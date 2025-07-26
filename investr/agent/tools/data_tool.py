@@ -1,6 +1,7 @@
 """Data API tool for investment research agent and conversation storage."""
 
 import time
+from typing import Any
 
 import httpx
 from autogen_core import CancellationToken
@@ -17,7 +18,7 @@ class DataTool(BaseTool[DataSearchArgs, DataSearchResult]):
     Also handles conversation storage and retrieval for session persistence.
     """
 
-    def __init__(self, data_api_base_url: str = "http://data-api:8002"):
+    def __init__(self, data_api_base_url: str = "http://data-api:8002") -> None:
         """Initialize the data tool.
 
         Args:
@@ -34,7 +35,7 @@ class DataTool(BaseTool[DataSearchArgs, DataSearchResult]):
                 "and other investment-related documents."
             ),
         )
-        self.base_url = data_api_base_url.rstrip("/")
+        self.base_url: str = data_api_base_url.rstrip("/")
         self.client = httpx.AsyncClient(timeout=30.0)
 
     async def run(
@@ -50,12 +51,12 @@ class DataTool(BaseTool[DataSearchArgs, DataSearchResult]):
             Search results with matching documents and metadata
 
         """
-        start_time = time.time()
+        start_time: float = time.time()
 
         try:
             # For now, return mock data since we haven't implemented search endpoint yet
             # TODO: Implement semantic search endpoint in Data API
-            mock_results = [
+            mock_results: list[dict[str, Any]] = [
                 {
                     "id": "doc_1",
                     "title": f"Investment Analysis for {args.query}",
@@ -69,7 +70,7 @@ class DataTool(BaseTool[DataSearchArgs, DataSearchResult]):
                     },
                 },
                 {
-                    "id": "doc_2", 
+                    "id": "doc_2",
                     "title": f"Market Research: {args.query} Sector Analysis",
                     "content": f"Comprehensive analysis of {args.query} market trends",
                     "relevance_score": 0.87,
@@ -83,9 +84,11 @@ class DataTool(BaseTool[DataSearchArgs, DataSearchResult]):
             ]
 
             # Limit results based on args.limit
-            limited_results = mock_results[: args.limit]
+            limited_results: list[dict[str, Any]] = mock_results[: args.limit]
 
-            query_time = (time.time() - start_time) * 1000  # Convert to milliseconds
+            query_time: float = (
+                time.time() - start_time
+            ) * 1000  # Convert to milliseconds
 
             return DataSearchResult(
                 results=limited_results,
@@ -118,22 +121,22 @@ class DataTool(BaseTool[DataSearchArgs, DataSearchResult]):
 
         """
         try:
-            message_data = {
+            message_data: dict[str, Any] = {
                 "role": role,
                 "content": content,
                 "tool_calls": tool_calls,
             }
-            
-            request_data = {
+
+            request_data: dict[str, Any] = {
                 "session_id": session_id,
                 "message": message_data,
             }
 
-            response = await self.client.post(
+            response: httpx.Response = await self.client.post(
                 f"{self.base_url}/conversations",
                 json=request_data,
             )
-            
+
             return response.status_code == 200
 
         except Exception:
@@ -150,12 +153,12 @@ class DataTool(BaseTool[DataSearchArgs, DataSearchResult]):
 
         """
         try:
-            response = await self.client.get(
+            response: httpx.Response = await self.client.get(
                 f"{self.base_url}/conversations/{session_id}"
             )
-            
+
             if response.status_code == 200:
-                data = response.json()
+                data: Any = response.json()
                 return data.get("messages", [])
             else:
                 return []
@@ -167,7 +170,7 @@ class DataTool(BaseTool[DataSearchArgs, DataSearchResult]):
         """Async context manager entry."""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         """Async context manager exit."""
         await self.client.aclose()
 
@@ -184,14 +187,14 @@ class DataTool(BaseTool[DataSearchArgs, DataSearchResult]):
         if not value.results:
             return f"No results found. Query took {value.query_time_ms:.1f}ms."
 
-        result_str = (
+        result_str: str = (
             f"Found {len(value.results)} results (total: {value.total_count}):\n\n"
         )
 
         for i, result in enumerate(value.results, 1):
-            relevance = result.get("relevance_score", 0)
-            title = result.get("title", "Untitled")
-            content = result.get("content", "")
+            relevance: float = result.get("relevance_score", 0)
+            title: str = result.get("title", "Untitled")
+            content: str = result.get("content", "")
 
             # Truncate content for readability
             if len(content) > 200:

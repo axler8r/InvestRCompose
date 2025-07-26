@@ -26,7 +26,7 @@ class OpenBBClient:
 
     def __init__(self) -> None:
         """Initialize the OpenBB client."""
-        self._obb = None # type: ignore
+        self._obb = None  # type: ignore
         self._initialized = False
 
     async def initialize(self) -> None:
@@ -49,7 +49,7 @@ class OpenBBClient:
         except ImportError as e:
             logger.error(f"OpenBB Platform not installed: {e}")
             # For now, we'll work with mock data if OpenBB isn't available
-            self._obb = None # type: ignore
+            self._obb = None  # type: ignore
             self._initialized = True
             logger.warning("OpenBB not available - using mock data mode")
 
@@ -94,7 +94,13 @@ class OpenBBClient:
                 start_date = end_date - timedelta(days=365)  # Default to 1 year
 
             # Validate provider and cast to correct type
-            valid_providers: List[str] = ["fmp", "intrinio", "polygon", "tiingo", "yfinance"]
+            valid_providers: List[str] = [
+                "fmp",
+                "intrinio",
+                "polygon",
+                "tiingo",
+                "yfinance",
+            ]
             if provider not in valid_providers:
                 provider = "yfinance"  # Default fallback
 

@@ -4,6 +4,7 @@ import os
 import time
 from typing import AsyncIterator, Dict
 
+from autogen_agentchat.agents._assistant_agent import AssistantAgent
 import uvicorn
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from fastapi import FastAPI, HTTPException
@@ -32,7 +33,7 @@ class AgentAPI:
         openbb_api_url: str = "http://openbb-api:8001",
         print_api_url: str = "http://print-api:8000",
         analysis_api_url: str = "http://analysis-api:8000",
-    ):
+    ) -> None:
         """Initialize the Agent API.
 
         Args:
@@ -50,7 +51,7 @@ class AgentAPI:
         )
 
         # Create agent
-        self.agent = InvestmentAgent.create_agent(
+        self.agent: AssistantAgent = InvestmentAgent.create_agent(
             model_client=self.model_client,
             data_api_url=data_api_url,
             openbb_api_url=openbb_api_url,
@@ -60,6 +61,7 @@ class AgentAPI:
 
         # Create DataTool for conversation storage
         from .tools.data_tool import DataTool
+
         self.data_tool = DataTool(data_api_base_url=data_api_url)
 
     def _convert_user_request_to_agent_request(
@@ -157,10 +159,14 @@ class AgentAPI:
             )
 
         # Convert to internal format
-        agent_request = self._convert_user_request_to_agent_request(user_request)
+        agent_request: AgentRequest = self._convert_user_request_to_agent_request(
+            user_request
+        )
 
         # Process with existing method
-        internal_response = await self.process_request(agent_request)
+        internal_response: InternalAgentResponse = await self.process_request(
+            agent_request
+        )
 
         # Store assistant response in conversation
         if self.data_tool:
@@ -202,7 +208,7 @@ class AgentAPI:
             HTTPException: If request processing fails
 
         """
-        start_time = time.time()
+        start_time: float = time.time()
 
         try:
             # Run the agent task
@@ -386,9 +392,9 @@ if __name__ == "__main__":
     print("Starting Investment Agent API...")
 
     # Get configuration from environment variables
-    openai_api_key = os.getenv("OPENAI_API_KEY", "placeholder-key")
-    model_name = os.getenv("MODEL_NAME", "gpt-4o-mini")
-    port = int(os.getenv("PORT", 8000))
+    openai_api_key: str = os.getenv("OPENAI_API_KEY", "placeholder-key")
+    model_name: str = os.getenv("MODEL_NAME", "gpt-4o-mini")
+    port: int = int(os.getenv("PORT", 8000))
 
     print(
         f"Configuration: API Key: {'***' if openai_api_key != 'placeholder-key' else 'placeholder'}, Model: {model_name}, Port: {port}"
@@ -397,7 +403,7 @@ if __name__ == "__main__":
     try:
         # Create the FastAPI app
         print("Creating FastAPI app...")
-        app = create_app(
+        app: FastAPI = create_app(
             openai_api_key=openai_api_key,
             model_name=model_name,
         )

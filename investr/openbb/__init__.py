@@ -8,4 +8,4 @@ financial metrics.
 from .api import create_app
 from .openbb_client import OpenBBClient
 
-__all__ = ["create_app", "OpenBBClient"]
+__all__: list[str] = ["create_app", "OpenBBClient"]

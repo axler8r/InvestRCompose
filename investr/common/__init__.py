@@ -11,7 +11,7 @@ from .schemas import (
     UserRequest,
 )
 
-__all__ = [
+__all__: list[str] = [
     "AgentResponse",
     "ConversationHistory",
     "ErrorResponse",

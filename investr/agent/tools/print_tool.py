@@ -15,7 +15,7 @@ class PrintTool(BaseTool[ReportGenerationArgs, ReportGenerationResult]):
     professional investment reports in various formats.
     """
 
-    def __init__(self, print_api_base_url: str = "http://print-api:8000"):
+    def __init__(self, print_api_base_url: str = "http://print-api:8000") -> None:
         """Initialize the print tool.
 
         Args:
@@ -77,7 +77,7 @@ class PrintTool(BaseTool[ReportGenerationArgs, ReportGenerationResult]):
             Human-readable string representation of the report generation result
 
         """
-        size_mb = value.size_bytes / (1024 * 1024)
+        size_mb: float = value.size_bytes / (1024 * 1024)
 
         result_str = "Report generated successfully!\n\n"
         result_str += "Report Details:\n"
