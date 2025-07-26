@@ -7,7 +7,7 @@ import httpx
 from autogen_core import CancellationToken
 from autogen_core.tools import BaseTool
 
-from ..models import DataSearchArgs, DataSearchResult
+from investr.agent.models import DataSearchArgs, DataSearchResult
 
 
 class DataTool(BaseTool[DataSearchArgs, DataSearchResult]):

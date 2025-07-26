@@ -1,7 +1,6 @@
 """Flask web application for the Investment Research Agent."""
 
 import os
-from typing import Literal
 import uuid
 from datetime import datetime
 

@@ -5,7 +5,7 @@ to deliver real-time and historical market data, company fundamentals, and
 financial metrics.
 """
 
-from .api import create_app
-from .openbb_client import OpenBBClient
+from investr.openbb.api import create_app
+from investr.openbb.openbb_client import OpenBBClient
 
 __all__: list[str] = ["create_app", "OpenBBClient"]

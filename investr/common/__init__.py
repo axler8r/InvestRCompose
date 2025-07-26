@@ -1,6 +1,6 @@
 """Common utilities and schemas shared across InvestR services."""
 
-from .schemas import (
+from investr.common.schemas import (
     AgentResponse,
     ConversationHistory,
     ErrorResponse,

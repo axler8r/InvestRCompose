@@ -6,8 +6,8 @@ from datetime import datetime
 from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse
 
-from .database import mongodb_client
-from .models import (
+from investr.data.database import mongodb_client
+from investr.data.models import (
     Conversation,
     ConversationHistoryResponse,
     ConversationRequest,

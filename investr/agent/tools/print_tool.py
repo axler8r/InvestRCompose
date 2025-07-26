@@ -5,7 +5,7 @@ import time
 from autogen_core import CancellationToken
 from autogen_core.tools import BaseTool
 
-from ..models import ReportGenerationArgs, ReportGenerationResult
+from investr.agent.models import ReportGenerationArgs, ReportGenerationResult
 
 
 class PrintTool(BaseTool[ReportGenerationArgs, ReportGenerationResult]):

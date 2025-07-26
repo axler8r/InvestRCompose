@@ -4,8 +4,8 @@ import os
 import time
 from typing import AsyncIterator, Dict
 
-from autogen_agentchat.agents._assistant_agent import AssistantAgent
 import uvicorn
+from autogen_agentchat.agents._assistant_agent import AssistantAgent
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse

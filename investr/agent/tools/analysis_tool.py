@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 from autogen_core import CancellationToken
 from autogen_core.tools import BaseTool
 
-from ..models import AnalysisArgs, AnalysisResult
+from investr.agent.models import AnalysisArgs, AnalysisResult
 
 
 class AnalysisTool(BaseTool[AnalysisArgs, AnalysisResult]):

@@ -5,9 +5,8 @@ from typing import Any, Dict
 
 from autogen_core import CancellationToken
 from autogen_core.tools import BaseTool
-from httpx import Response
 
-from ..models import MarketDataArgs, MarketDataResult
+from investr.agent.models import MarketDataArgs, MarketDataResult
 
 
 class OpenBBTool(BaseTool[MarketDataArgs, MarketDataResult]):

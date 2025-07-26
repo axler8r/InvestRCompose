@@ -6,7 +6,7 @@ from autogen_agentchat.agents import AssistantAgent
 from autogen_core.models import ChatCompletionClient
 from autogen_core.tools import BaseTool, StaticWorkbench
 
-from .tools import AnalysisTool, DataTool, OpenBBTool, PrintTool
+from investr.agent.tools import AnalysisTool, DataTool, OpenBBTool, PrintTool
 
 
 class InvestmentAgent:
