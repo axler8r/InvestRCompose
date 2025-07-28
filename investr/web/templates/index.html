@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investment Research Agent</title>
+    <!-- Markdown parser for rendering agent responses -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.2/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            height: calc(100vh - 80px);
+        }
+
+        .messages {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            border-bottom: 1px solid #eee;
+        }
+
+        .message {
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+
+        .message.user {
+            background-color: #3498db;
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .message.agent {
+            background-color: #ecf0f1;
+            color: #2c3e50;
+        }
+
+        /* Markdown styles for agent messages */
+        .message.agent h1, .message.agent h2, .message.agent h3 {
+            margin: 0.5rem 0;
+            color: #2c3e50;
+        }
+
+        .message.agent h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-bottom: 1px solid #bdc3c7;
+            padding-bottom: 0.25rem;
+        }
+
+        .message.agent ul, .message.agent ol {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+
+        .message.agent li {
+            margin: 0.25rem 0;
+        }
+
+        .message.agent strong {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+
+        .message.agent code {
+            background-color: #f8f9fa;
+            padding: 0.125rem 0.25rem;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9rem;
+        }
+
+        .message.agent blockquote {
+            border-left: 3px solid #3498db;
+            margin: 0.5rem 0;
+            padding-left: 1rem;
+            font-style: italic;
+            color: #5a6c7d;
+        }
+
+        .message.agent p {
+            margin: 0.5rem 0;
+            line-height: 1.4;
+        }
+
+        .message .timestamp {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 0.5rem;
+        }
+
+        .input-container {
+            display: flex;
+            padding: 1rem;
+            gap: 0.5rem;
+        }
+
+        #messageInput {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        #sendButton {
+            padding: 0.75rem 1.5rem;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        #sendButton:hover {
+            background-color: #2980b9;
+        }
+
+        #sendButton:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 0.75rem;
+            font-style: italic;
+            color: #7f8c8d;
+        }
+
+        .error {
+            background-color: #e74c3c;
+            color: white;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+
+        /* Disclosure widget styles */
+        .disclosure-section {
+            margin-top: 0.75rem;
+        }
+
+        .disclosure-header {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 0.5rem;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #495057;
+            transition: background-color 0.2s ease;
+        }
+
+        .disclosure-header:hover {
+            background-color: #e9ecef;
+        }
+
+        .disclosure-header .icon {
+            margin-right: 0.5rem;
+            font-size: 0.8rem;
+            transition: transform 0.2s ease;
+        }
+
+        .disclosure-header.expanded .icon {
+            transform: rotate(90deg);
+        }
+
+        .disclosure-content {
+            display: none;
+            padding: 0.75rem;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            font-size: 0.85rem;
+        }
+
+        .references-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .references-list li {
+            padding: 0.25rem 0;
+        }
+
+        .references-list a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .references-list a:hover {
+            text-decoration: underline;
+        }
+
+        .tool-call {
+            margin-bottom: 0.75rem;
+            padding: 0.5rem;
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+
+        .tool-call:last-child {
+            margin-bottom: 0;
+        }
+
+        .tool-call-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .tool-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .tool-status {
+            padding: 0.125rem 0.375rem;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .tool-status.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .tool-status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .tool-result {
+            font-size: 0.8rem;
+            color: #6c757d;
+            background-color: #f8f9fa;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            margin-top: 0.25rem;
+        }
+
+        .tool-execution-time {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Investment Research Agent</h1>
+        <p>Ask me anything about investments, market analysis, or financial research</p>
+    </div>
+
+    <div class="chat-container">
+        <div class="messages" id="messages">
+            <div class="message agent">
+                <div>Hello! I'm your Investment Research Agent. I can help you with market analysis, company research, portfolio reviews, and financial insights. What would you like to know?</div>
+                <div class="timestamp">Just now</div>
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator">
+            Agent is thinking...
+        </div>
+
+        <div class="input-container">
+            <input 
+                type="text" 
+                id="messageInput" 
+                placeholder="Ask about investments, stocks, market trends..."
+                maxlength="500"
+            >
+            <button id="sendButton">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const messagesContainer = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const typingIndicator = document.getElementById('typingIndicator');
+
+        function addMessage(content, isUser = false, timestamp = null, toolCalls = [], references = []) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'agent'}`;
+            
+            const timeStr = timestamp ? new Date(timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+            
+            // Render markdown for agent messages, plain text for user messages
+            const messageContent = isUser ? content : marked.parse(content);
+            
+            let disclosureWidgets = '';
+            
+            // Add disclosure widgets for agent messages only
+            if (!isUser && (references.length > 0 || toolCalls.length > 0)) {
+                // References disclosure
+                if (references.length > 0) {
+                    const referencesHtml = references.map(ref => 
+                        `<li><a href="${ref}" target="_blank" rel="noopener noreferrer">${ref}</a></li>`
+                    ).join('');
+                    
+                    disclosureWidgets += `
+                        <div class="disclosure-section">
+                            <div class="disclosure-header" onclick="toggleDisclosure(this)">
+                                <span class="icon">▶</span>
+                                <span>📚 References (${references.length})</span>
+                            </div>
+                            <div class="disclosure-content">
+                                <ul class="references-list">${referencesHtml}</ul>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // Tool calls disclosure
+                if (toolCalls.length > 0) {
+                    const toolCallsHtml = toolCalls.map(tool => {
+                        const statusClass = tool.success ? 'success' : 'error';
+                        const statusText = tool.success ? 'Success' : 'Failed';
+                        
+                        return `
+                            <div class="tool-call">
+                                <div class="tool-call-header">
+                                    <span class="tool-name">${tool.name}</span>
+                                    <span class="tool-status ${statusClass}">${statusText}</span>
+                                </div>
+                                <div class="tool-result">${tool.result}</div>
+                                ${tool.execution_time_ms ? `<div class="tool-execution-time">Execution time: ${tool.execution_time_ms}ms</div>` : ''}
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    disclosureWidgets += `
+                        <div class="disclosure-section">
+                            <div class="disclosure-header" onclick="toggleDisclosure(this)">
+                                <span class="icon">▶</span>
+                                <span>🔧 Tool Calls (${toolCalls.length})</span>
+                            </div>
+                            <div class="disclosure-content">
+                                ${toolCallsHtml}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            messageDiv.innerHTML = `
+                <div>${messageContent}</div>
+                ${disclosureWidgets}
+                <div class="timestamp">${timeStr}</div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function addError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = `Error: ${message}`;
+            messagesContainer.appendChild(errorDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function toggleDisclosure(header) {
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('.icon');
+            
+            if (content.style.display === 'none' || content.style.display === '') {
+                content.style.display = 'block';
+                header.classList.add('expanded');
+            } else {
+                content.style.display = 'none';
+                header.classList.remove('expanded');
+            }
+        }
+
+        function setLoading(loading) {
+            sendButton.disabled = loading;
+            messageInput.disabled = loading;
+            typingIndicator.style.display = loading ? 'block' : 'none';
+            
+            if (loading) {
+                sendButton.textContent = 'Sending...';
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            } else {
+                sendButton.textContent = 'Send';
+            }
+        }
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            // Add user message to chat
+            addMessage(message, true);
+            messageInput.value = '';
+            setLoading(true);
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    addError(data.error);
+                } else {
+                    addMessage(
+                        data.response, 
+                        false, 
+                        data.timestamp,
+                        data.tool_calls || [],
+                        data.references || []
+                    );
+                }
+            } catch (error) {
+                addError(`Failed to send message: ${error.message}`);
+            } finally {
+                setLoading(false);
+                messageInput.focus();
+            }
+        }
+
+        // Event listeners
+        sendButton.addEventListener('click', sendMessage);
+        
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Focus input on load
+        messageInput.focus();
+    </script>
+</body>
+</html>

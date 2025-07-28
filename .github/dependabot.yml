@@ -1,0 +1,12 @@
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "fix"
+    open-pull-requests-limit: 5
+    # Monitor pyproject.toml for uv-managed dependencies
+    # Dependabot will update the pyproject.toml file
+    # You'll need to run 'uv lock' after merging PRs
