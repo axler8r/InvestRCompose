@@ -12,7 +12,7 @@ TEST_DIR := tests
 
 
 # phony ------------------------------------------------------------->8---------
-.PHONY: help install up down start stop restart clean lint format check test requirements build status logs mongosh
+.PHONY: help install up down start stop restart clean lint format check test requirements build status logs mongosh browse cli
 
 
 # default target ---------------------------------------------------->8---------
@@ -89,11 +89,19 @@ format: ## Format code using black
 check: lint format ## Run code quality checks
 	@echo "Running code quality checks..."
 
+
 # test targets ------------------------------------------------------>8---------
 test: ## Run tests using pytest
 	@echo "Running tests..."
 	$(PYTHON) -m pytest $(TEST_DIR)
 
+
+# utility targets --------------------------------------------------->8---------
+browse: ## Open the application in a web browser
+	@echo "Opening application in web browser..."
+	xdg-open http://localhost:5000 || open http://localhost:5000
+
 cli: ## Run the interactive CLI application
 	@echo "Starting CLI application..."
 	$(PYTHON) -m investr.cli.app
+
