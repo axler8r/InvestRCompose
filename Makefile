@@ -1,7 +1,6 @@
 # variables --------------------------------------------------------->8---------
 PYTHON ?= python3
 PROJECT_NAME := $(shell basename $(CURDIR))
-APP_NAME := $(shell echo $(PROJECT_NAME) | tr '[:upper:]' '[:lower:]')
 DOCKER_COMPOSE := docker compose
 UV := uv
 RUFF = $(UV) run ruff
@@ -40,7 +39,7 @@ requirements: ## Create a requirements.txt file from the current environment
 
 build: requirements ## Build all application components
 	@echo "Building Docker images..."
-	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) --project-name axler8r-$(APP_NAME) build
+	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) build
 	@echo "Cleaning up requirements.txt..."
 	rm --force $(APP_DIR)/requirements.txt
 
