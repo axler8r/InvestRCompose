@@ -12,7 +12,11 @@ TEST_DIR := tests
 
 
 # phony ------------------------------------------------------------->8---------
-.PHONY: help install up down start stop restart clean lint format check test requirements build status logs mongosh browse cli
+.PHONY: help \
+		install \
+		requirements build up down start stop restart status logs clean \
+		lint format check test \
+		browse cli mongosh
 
 
 # default target ---------------------------------------------------->8---------
@@ -66,10 +70,6 @@ logs: ## Show logs of Docker containers
 	@echo "Showing logs of Docker containers..."
 	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) logs --follow
 
-mongosh: ## Connect to MongoDB shell
-	@echo "Connecting to MongoDB shell..."
-	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) exec mongodb mongosh investr
-
 clean: down ## Clean up Docker containers and images
 	@echo "Cleaning up Docker containers and images..."
 	$(DOCKER_COMPOSE) down --rmi all --volumes --remove-orphans
@@ -105,3 +105,6 @@ cli: ## Run the interactive CLI application
 	@echo "Starting CLI application..."
 	$(PYTHON) -m investr.cli.app
 
+mongosh: ## Connect to MongoDB shell
+	@echo "Connecting to MongoDB shell..."
+	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) exec mongodb mongosh investr
