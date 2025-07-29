@@ -1,10 +1,13 @@
 """FastAPI service for conversation storage and retrieval."""
 
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse
+from loguru import logger
 
 from investr.data.database import mongodb_client
 from investr.data.models import (
@@ -17,20 +20,17 @@ from investr.data.models import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifespan context manager for FastAPI application.
-
-    Handles startup and shutdown events for database connections.
-    """
+    """Application lifespan manager for startup and shutdown."""
     # Startup
-    try:
-        await mongodb_client.connect()
-    except Exception as e:
-        raise RuntimeError(f"Failed to initialize database: {e}") from e
+    logger.info("Starting Data API service...")
+    await mongodb_client.connect()
+    logger.info("MongoDB client connected")
 
     yield
 
     # Shutdown
     await mongodb_client.disconnect()
+    logger.info("Data API service shut down")
 
 
 def create_app() -> FastAPI:
@@ -70,16 +70,17 @@ def create_app() -> FastAPI:
         )
 
     @app.post("/conversations")
-    async def add_message(request: ConversationRequest) -> ConversationResponse:
-        """Add a message to a conversation.
-
-        Creates a new conversation if one doesn't exist for the session.
+    async def store_conversation(request: ConversationRequest) -> ConversationResponse:
+        """Store a conversation message.
 
         Args:
-            request: Conversation request with session_id and message
+            request: Conversation storage request
 
         Returns:
-            ConversationResponse with updated conversation details
+            Response with conversation metadata
+
+        Raises:
+            HTTPException: If storage operation fails
 
         """
         try:
@@ -109,23 +110,28 @@ def create_app() -> FastAPI:
             )
 
         except Exception as e:
+            logger.error(f"Failed to store conversation: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to save conversation: {str(e)}",
+                detail=f"Failed to store conversation: {str(e)}",
             ) from e
 
     @app.get("/conversations/{session_id}")
-    async def get_conversation(session_id: str) -> ConversationHistoryResponse:
+    async def get_conversation_history(
+        session_id: str,
+        limit: Optional[int] = None,
+    ) -> ConversationHistoryResponse:
         """Retrieve conversation history for a session.
 
         Args:
-            session_id: Unique session identifier
+            session_id: Session identifier
+            limit: Maximum number of messages to return
 
         Returns:
-            ConversationHistoryResponse with message history
+            Conversation history with messages
 
         Raises:
-            HTTPException: If conversation not found
+            HTTPException: If retrieval operation fails
 
         """
         try:
@@ -139,18 +145,23 @@ def create_app() -> FastAPI:
                     detail=f"Conversation not found for session: {session_id}",
                 )
 
+            # Apply limit if specified
+            messages = conversation.messages
+            if limit is not None and limit > 0:
+                messages = messages[-limit:]
+
             return ConversationHistoryResponse(
                 session_id=conversation.session_id,
-                messages=conversation.messages,
-                message_count=len(conversation.messages),
+                messages=messages,
+                total_messages=len(conversation.messages), # type: ignore
                 created_at=conversation.created_at,
                 updated_at=conversation.updated_at,
-                title=conversation.title,
-            )
+            ) # type: ignore
 
         except HTTPException:
             raise
         except Exception as e:
+            logger.error(f"Failed to retrieve conversation history: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to retrieve conversation: {str(e)}",
@@ -158,16 +169,16 @@ def create_app() -> FastAPI:
 
     @app.delete("/conversations/{session_id}")
     async def delete_conversation(session_id: str) -> JSONResponse:
-        """Delete a conversation.
+        """Delete a conversation and all its messages.
 
         Args:
-            session_id: Unique session identifier
+            session_id: Session identifier
 
         Returns:
-            JSON response confirming deletion
+            Deletion confirmation response
 
         Raises:
-            HTTPException: If conversation not found
+            HTTPException: If deletion operation fails
 
         """
         try:
@@ -187,6 +198,7 @@ def create_app() -> FastAPI:
                 status_code=status.HTTP_200_OK,
                 content={
                     "message": f"Conversation deleted for session: {session_id}",
+                    "session_id": session_id,
                     "timestamp": datetime.utcnow().isoformat(),
                 },
             )
@@ -194,29 +206,71 @@ def create_app() -> FastAPI:
         except HTTPException:
             raise
         except Exception as e:
+            logger.error(f"Failed to delete conversation: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to delete conversation: {str(e)}",
             ) from e
 
+    @app.get("/conversations")
+    async def list_conversations(limit: Optional[int] = 50) -> JSONResponse:
+        """List all conversation sessions.
+
+        Args:
+            limit: Maximum number of sessions to return
+
+        Returns:
+            List of conversation sessions with metadata
+
+        Raises:
+            HTTPException: If listing operation fails
+
+        """
+        try:
+            query = Conversation.find_all()
+            if limit:
+                query = query.limit(limit)
+
+            conversations = await query.to_list()
+
+            session_list = [
+                {
+                    "session_id": conv.session_id,
+                    "message_count": len(conv.messages),
+                    "created_at": conv.created_at.isoformat(),
+                    "updated_at": conv.updated_at.isoformat(),
+                }
+                for conv in conversations
+            ]
+
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={
+                    "sessions": session_list,
+                    "total_count": len(session_list),
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to list conversations: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to list conversations: {str(e)}",
+            ) from e
+
     return app
 
 
-# Create application instance
-app: FastAPI = create_app()
-
+# Create the FastAPI app instance
+app = create_app()
 
 if __name__ == "__main__":
-    import os
-
     import uvicorn
-
-    port = int(os.getenv("PORT", 8002))
-    host = os.getenv("HOST", "0.0.0.0")
 
     uvicorn.run(
         "investr.data.api:app",
-        host=host,
-        port=port,
+        host="0.0.0.0",
+        port=int(os.getenv("PORT", "8002")),
         reload=True,
     )

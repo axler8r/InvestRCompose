@@ -1,7 +1,6 @@
 # variables --------------------------------------------------------->8---------
 PYTHON ?= python3
 PROJECT_NAME := $(shell basename $(CURDIR))
-APP_NAME := $(shell echo $(PROJECT_NAME) | tr '[:upper:]' '[:lower:]')
 DOCKER_COMPOSE := docker compose
 UV := uv
 RUFF = $(UV) run ruff
@@ -13,7 +12,11 @@ TEST_DIR := tests
 
 
 # phony ------------------------------------------------------------->8---------
-.PHONY: help install up down start stop restart clean lint format check test requirements build status logs mongosh
+.PHONY: help \
+		install \
+		requirements build up down start stop restart status logs clean \
+		lint format check test \
+		browse cli mongosh
 
 
 # default target ---------------------------------------------------->8---------
@@ -40,7 +43,7 @@ requirements: ## Create a requirements.txt file from the current environment
 
 build: requirements ## Build all application components
 	@echo "Building Docker images..."
-	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) --project-name axler8r-$(APP_NAME) build
+	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) build
 	@echo "Cleaning up requirements.txt..."
 	rm --force $(APP_DIR)/requirements.txt
 
@@ -67,10 +70,6 @@ logs: ## Show logs of Docker containers
 	@echo "Showing logs of Docker containers..."
 	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) logs --follow
 
-mongosh: ## Connect to MongoDB shell
-	@echo "Connecting to MongoDB shell..."
-	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) exec mongodb mongosh investr
-
 clean: down ## Clean up Docker containers and images
 	@echo "Cleaning up Docker containers and images..."
 	$(DOCKER_COMPOSE) down --rmi all --volumes --remove-orphans
@@ -90,11 +89,22 @@ format: ## Format code using black
 check: lint format ## Run code quality checks
 	@echo "Running code quality checks..."
 
+
 # test targets ------------------------------------------------------>8---------
 test: ## Run tests using pytest
 	@echo "Running tests..."
 	$(PYTHON) -m pytest $(TEST_DIR)
 
+
+# utility targets --------------------------------------------------->8---------
+browse: ## Open the application in a web browser
+	@echo "Opening application in web browser..."
+	xdg-open http://localhost:5000 || open http://localhost:5000
+
 cli: ## Run the interactive CLI application
 	@echo "Starting CLI application..."
 	$(PYTHON) -m investr.cli.app
+
+mongosh: ## Connect to MongoDB shell
+	@echo "Connecting to MongoDB shell..."
+	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) exec mongodb mongosh investr
