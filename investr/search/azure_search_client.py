@@ -225,8 +225,8 @@ class AzureSearchClient:
                 if embedding:
                     document.content_vector = embedding
 
-            # Convert to dict for Azure Search
-            doc_dict = document.model_dump()
+            # Convert to dict for Azure Search, excluding metadata field
+            doc_dict = document.model_dump(exclude={"metadata"})
 
             # Upload document
             result = self.search_client.upload_documents([doc_dict])

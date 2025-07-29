@@ -829,6 +829,7 @@ dependencies = [
     { name = "pip" },
     { name = "pydantic" },
     { name = "pypdf" },
+    { name = "python-dotenv" },
     { name = "uvicorn" },
 ]
 
@@ -857,6 +858,7 @@ requires-dist = [
     { name = "pip", specifier = ">=25.1.1" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pypdf", specifier = ">=5.1.0" },
+    { name = "python-dotenv", specifier = ">=1.1.1" },
     { name = "uvicorn", specifier = ">=0.34.2,<0.35.0" },
 ]
 

@@ -9,7 +9,7 @@ from loguru import logger
 from pydantic import BaseModel
 from pypdf import PdfReader
 
-from investr.data.azure_search_client import SearchDocument
+from investr.search.azure_search_client import SearchDocument
 
 
 class DocumentChunk(BaseModel):
@@ -211,7 +211,6 @@ class DocumentProcessor:
         # Extract text from PDF
         extraction_result = self.extract_text_from_pdf(file_path)
         full_text = extraction_result["full_text"]
-        page_texts = extraction_result["page_texts"]
         metadata = extraction_result["metadata"]
 
         # Generate document ID based on file content
@@ -226,17 +225,9 @@ class DocumentProcessor:
         # Chunk the full document
         all_chunks = []
 
-        # Option 1: Chunk by page (better for maintaining context)
-        for page_info in page_texts:
-            if page_info["text"].strip():
-                page_chunks = self.chunk_text(
-                    page_info["text"], page_number=page_info["page_number"]
-                )
-                all_chunks.extend(page_chunks)
-
-        # If no chunks from pages, chunk the full text
-        if not all_chunks:
-            all_chunks = self.chunk_text(full_text)
+        # Chunk the entire document at once for better efficiency
+        # This creates appropriately sized chunks based on chunk_size parameter
+        all_chunks = self.chunk_text(full_text)
 
         logger.info(f"Created {len(all_chunks)} chunks from {file_path}")
 
