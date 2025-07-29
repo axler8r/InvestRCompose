@@ -35,9 +35,18 @@ InvestR Compose (Docker Compose) - Current Implementation
 │   ├── RESTful endpoints with proper error handling
 │   └── Graceful fallback to mock data when SDK unavailable
 │
+├── Data API (FastAPI + MongoDB) ✓ IMPLEMENTED
+│   ├── Conversation storage with MongoDB persistence
+│   ├── Session-based conversation organization
+│   └── RESTful endpoints for conversation management
+│
+├── Search API (FastAPI + Azure AI Search) ✓ IMPLEMENTED
+│   ├── Semantic search with vector embeddings
+│   ├── PDF document processing and chunking
+│   ├── ETF prospectus indexing system
+│   └── Hybrid search capabilities (semantic + vector + text)
+│
 └── Future Services:
-    ├── Data API (FastAPI + MongoDB) ✓ IMPLEMENTED - Conversation storage only
-    ├── Search API (FastAPI + Azure AI Search) ✓ IMPLEMENTED - Document search only
     ├── Print API (FastAPI + Markdown Utils + ReportLab) - PLANNED
     └── Analysis API (FastAPI) - PLANNED
 ```
@@ -259,8 +268,11 @@ InvestRCompose/
 |   ├── print/                     # 🚧 Placeholder for Print API
 |   └── analysis/                  # 🚧 Placeholder for Analysis API
 ├── tests/                         # ✓ Test suite (12/12 tests passing)
+├── scripts/                       # ✓ Utility scripts
+│   └── index_etf_prospectuses.py  # ETF document indexing script
+├── res/                           # ✓ Sample documents (ETF prospectuses)
 └── app/                           # ✓ Docker deployment configuration
-    ├── compose.yml                # Current: web + agent + data + openbb services
+    ├── compose.yml                # Current: web + agent + data + search + openbb services
     ├── .env                       # Environment configuration
     ├── .env.example               # Environment template
     └── services/                  # Service-specific Dockerfiles
@@ -333,7 +345,7 @@ The `app/compose.yml` currently defines six services:
 - [x] **Docker Orchestration**: Multi-service Docker Compose with persistent volumes
 - [x] **Type Safety**: Complete Pydantic validation throughout storage pipeline
 
-### Phase 3: Service Extraction (🚧 In Progress)
+### Phase 3: Service Extraction (✓ Complete)
 - [x] **OpenBB API Service**: Extract OpenBBTool into separate service ✓ COMPLETE
   - OpenBB Platform SDK v4.4.5 integration for real market data
   - FastAPI service with REST endpoints (/health, /market-data/*)
@@ -350,13 +362,20 @@ The `app/compose.yml` currently defines six services:
   - RESTful search endpoints with comprehensive error handling
   - DataTool integration with graceful fallback to mock data
 
-### Phase 4: Advanced Services (🔮 Planned)
-- [ ] **Print API Service**: Document generation service
-  - ReportLab for PDF generation
-  - Markdown to HTML conversion
-  - Template management system
-- [ ] **Analysis API Service**: Financial analysis service
-### Phase 4: Advanced Services (🔮 Planned)
+### Phase 4: Semantic Search Implementation (✓ Complete)
+- [x] **Search API Service**: Standalone Azure AI Search microservice ✓ COMPLETE
+  - Full Azure AI Search integration with vector embeddings
+  - Document processing system with intelligent chunking
+  - Hybrid search capabilities (semantic + vector + text search)
+  - Custom search index schema for investment documents
+  - ETF prospectus indexing and search system
+  - Dedicated Search API microservice (port 8003)
+  - SearchTool and ConversationTool separation
+  - Comprehensive error handling and graceful fallbacks
+  - PDF text extraction and metadata processing
+  - HNSW algorithm configuration for optimal performance
+
+### Phase 5: Advanced Services (🔮 Planned)
 - [ ] **Print API Service**: Document generation service
   - ReportLab for PDF generation
   - Markdown to HTML conversion
@@ -366,7 +385,7 @@ The `app/compose.yml` currently defines six services:
   - Risk assessment models
   - Portfolio optimization tools
 
-### Phase 5: Production Readiness (🔮 Future)
+### Phase 6: Production Readiness (🔮 Future)
 - [ ] **Authentication & Security**: User authentication, session-based auth integration
 - [ ] **Monitoring & Observability**: Logging, metrics, comprehensive health checks
 - [ ] **Performance Optimization**: Caching, connection pooling, async improvements
