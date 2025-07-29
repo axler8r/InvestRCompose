@@ -1,6 +1,6 @@
 author: axl
-date: 2025-07-28
-version: 0.6.0
+date: 2025-07-30
+version: 0.7.0
 ---
 # Changelog
 
@@ -8,6 +8,111 @@ All notable changes to the InvestR project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## 0.7.0
+**2025-07-30**
+
+### Added
+- **Semantic Search Service Implementation**
+  - Implemented standalone Search API service with Azure AI Search integration
+  - Added comprehensive semantic search capabilities with vector embeddings
+  - Created `AzureSearchClient` with full CRUD operations for document management
+  - Integrated OpenAI text-embedding-ada-002 for semantic similarity search
+  - Added hybrid search combining semantic, vector, and traditional text search
+  - Implemented HNSW algorithm configuration for optimal vector search performance
+
+- **Document Processing System**
+  - Added `DocumentProcessor` class for PDF text extraction and chunking
+  - Implemented intelligent text chunking with configurable size and overlap
+  - Added PDF metadata extraction (title, author, creation date, etc.)
+  - Created document-to-search-document conversion pipeline
+  - Added support for ETF prospectus and financial document processing
+
+- **Agent Tool Architecture Enhancement**
+  - Created `SearchTool` for dedicated document search operations
+  - Implemented `ConversationTool` for separate conversation storage
+  - Enhanced `DataTool` for backward compatibility with legacy interfaces
+  - Added comprehensive error handling and graceful fallback mechanisms
+  - Implemented HTTP client-based tool communication patterns
+
+- **Search API Endpoints**
+  - Added `/search` endpoint for document semantic search
+  - Implemented `/search/status` for service health and index monitoring
+  - Created `/search/index` endpoint for bulk document indexing
+  - Added comprehensive error handling and mock data fallbacks
+  - Implemented proper FastAPI lifecycle management with async initialization
+
+- **ETF Prospectus Indexing System**
+  - Created standalone indexing script for ETF prospectus documents
+  - Added automated PDF processing from `res/` directory
+  - Implemented batch document indexing with progress tracking
+  - Added search verification and testing capabilities
+  - Created sample ETF document collection for testing
+
+- **Azure AI Search Integration**
+  - Implemented vector search with 1536-dimensional embeddings
+  - Added semantic configuration with prioritized fields
+  - Created custom search index schema for investment documents
+  - Integrated Azure credential management (key-based and DefaultAzureCredential)
+  - Added document count tracking and health monitoring
+
+### Changed
+- **Service Architecture**
+  - Separated search functionality into dedicated microservice
+  - Updated Docker Compose configuration to include search-api service
+  - Enhanced service discovery and inter-service communication
+  - Improved environment variable configuration for Azure services
+
+- **Data Models**
+  - Enhanced search result models with relevance scoring
+  - Added comprehensive document metadata support
+  - Improved error response structures across all APIs
+  - Updated Pydantic models for better type safety
+
+- **Agent System Enhancement**
+  - Refactored tool system to use dedicated search and conversation tools
+  - Improved agent factory methods for new and legacy tool configurations
+  - Enhanced error handling and fallback mechanisms
+  - Added better separation of concerns between tool responsibilities
+
+### Technical Details
+
+#### Search Infrastructure
+- **Azure AI Search**: Full integration with semantic search capabilities
+- **Vector Embeddings**: OpenAI text-embedding-ada-002 with 1536 dimensions
+- **Hybrid Search**: Combines semantic ranking, vector similarity, and keyword matching
+- **Index Schema**: Custom schema optimized for investment document search
+- **Document Processing**: Intelligent chunking with configurable parameters
+
+#### Service Integration
+- **Search API Service**: Dedicated FastAPI service (port 8003)
+- **Document Indexing**: Automated processing and indexing pipeline
+- **Health Monitoring**: Comprehensive service and index health checks
+- **Graceful Degradation**: Mock data fallbacks when services unavailable
+
+#### Development Tools
+- **ETF Indexing Script**: Standalone tool for document processing and indexing
+- **Search Verification**: Built-in testing and validation capabilities
+- **Environment Management**: Enhanced configuration for Azure services
+- **Logging**: Comprehensive logging with loguru integration
+
+### Current Status
+- [×] **Phase 1**: Core Agent Implementation (Complete)
+- [×] **Phase 2**: Conversation Storage (Complete)
+- [×] **Phase 3**: OpenBB Microservice Integration (Complete)
+- [×] **Phase 4**: Semantic Search Implementation (Complete) ✅ NEW
+  - Azure AI Search integration with vector embeddings
+  - Document processing and intelligent chunking
+  - Hybrid search capabilities (semantic + vector + text)
+  - ETF prospectus indexing and search system
+  - Dedicated Search API microservice
+- [ ] **Phase 5**: Advanced Services (Planned)
+  - Print API Service (ReportLab integration)
+  - Analysis API Service (Financial analysis)
+- [ ] **Phase 6**: Production Readiness (Future)
+  - Authentication & Security
+  - Monitoring & Observability
+  - Performance Optimization
 
 ## 0.6.0
 **2025-07-28**
