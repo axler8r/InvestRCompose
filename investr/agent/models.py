@@ -123,6 +123,41 @@ class TokenUsage(BaseModel):
 # Tool-specific models
 
 
+class SearchArgs(BaseModel):
+    """Arguments for document search tool."""
+
+    query: str = Field(..., description="Search query for investment documents")
+    collection: str = Field("default", description="Document collection to search in")
+    limit: int = Field(10, description="Maximum number of results to return")
+    include_metadata: bool = Field(
+        True, description="Whether to include result metadata"
+    )
+
+
+class SearchResult(BaseModel):
+    """Result from document search tool."""
+
+    results: List[Dict[str, Any]] = Field(..., description="Search results")
+    total_count: int = Field(..., description="Total number of matching results")
+    query_time_ms: float = Field(..., description="Query execution time")
+
+
+class ConversationArgs(BaseModel):
+    """Arguments for conversation storage tool."""
+
+    session_id: str = Field(..., description="Unique session identifier")
+    message: Dict[str, Any] = Field(..., description="Message to store")
+    message_type: str = Field("user", description="Type of message (user, agent, tool)")
+
+
+class ConversationResult(BaseModel):
+    """Result from conversation storage tool."""
+
+    session_id: str = Field(..., description="Session identifier")
+    message_count: int = Field(..., description="Total messages in conversation")
+    stored_at: datetime = Field(..., description="When the message was stored")
+
+
 class DataSearchArgs(BaseModel):
     """Arguments for data search tool."""
 
@@ -198,3 +233,28 @@ class AnalysisResult(BaseModel):
     confidence_score: Optional[float] = Field(
         None, description="Confidence score for the analysis"
     )
+
+
+# Export all models
+__all__ = [
+    # Enums
+    "TaskType",
+    "TaskPriority",
+    # Core models  
+    "TaskContext",
+    "AgentRequest",
+    "AgentResponse",
+    # Tool-specific models
+    "SearchArgs",
+    "SearchResult", 
+    "ConversationArgs",
+    "ConversationResult",
+    "DataSearchArgs",
+    "DataSearchResult",
+    "MarketDataArgs",
+    "MarketDataResult",
+    "ReportGenerationArgs",
+    "ReportGenerationResult",
+    "AnalysisArgs",
+    "AnalysisResult",
+]
