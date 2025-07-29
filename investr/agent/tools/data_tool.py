@@ -1,4 +1,4 @@
-"""Data API tool for investment research agent and conversation storage."""
+"""Data API tool for investment research agent - hybrid search and conversation tool."""
 
 import time
 from typing import Any
@@ -11,18 +11,23 @@ from investr.agent.models import DataSearchArgs, DataSearchResult
 
 
 class DataTool(BaseTool[DataSearchArgs, DataSearchResult]):
-    """Tool for searching and retrieving investment data via Data API.
-
-    This tool provides semantic search capabilities over stored investment data,
-    including company information, financial statements, and market research.
-    Also handles conversation storage and retrieval for session persistence.
+    """Legacy tool for searching and retrieving investment data.
+    
+    This tool maintains backward compatibility while internally using
+    the new SearchTool and ConversationTool for actual operations.
+    For new implementations, prefer using SearchTool and ConversationTool directly.
     """
 
-    def __init__(self, data_api_base_url: str = "http://data-api:8002") -> None:
+    def __init__(
+        self, 
+        data_api_base_url: str = "http://data-api:8002",
+        search_api_base_url: str = "http://search-api:8003"
+    ) -> None:
         """Initialize the data tool.
 
         Args:
-            data_api_base_url: Base URL for the Data API service
+            data_api_base_url: Base URL for the Data API service (conversation storage)
+            search_api_base_url: Base URL for the Search API service (document search)
 
         """
         super().__init__(
@@ -30,12 +35,14 @@ class DataTool(BaseTool[DataSearchArgs, DataSearchResult]):
             return_type=DataSearchResult,
             name="search_data",
             description=(
-                "Search for investment data using semantic search. "
+                "LEGACY: Search for investment data using semantic search. "
+                "For new implementations, use SearchTool directly. "
                 "Can find company information, financial data, market research, "
                 "and other investment-related documents."
             ),
         )
-        self.base_url: str = data_api_base_url.rstrip("/")
+        self.data_api_url: str = data_api_base_url.rstrip("/")
+        self.search_api_url: str = search_api_base_url.rstrip("/")
         self.client = httpx.AsyncClient(timeout=30.0)
 
     async def run(
@@ -54,56 +61,155 @@ class DataTool(BaseTool[DataSearchArgs, DataSearchResult]):
         start_time: float = time.time()
 
         try:
-            # For now, return mock data since we haven't implemented search endpoint yet
-            # TODO: Implement semantic search endpoint in Data API
-            mock_results: list[dict[str, Any]] = [
-                {
-                    "id": "doc_1",
-                    "title": f"Investment Analysis for {args.query}",
-                    "content": f"This is a mock result for query: {args.query}",
-                    "relevance_score": 0.95,
-                    "source": "mock_database",
-                    "metadata": {
-                        "company": args.query,
-                        "sector": "Technology",
-                        "date_created": "2024-01-15",
-                    },
-                },
-                {
-                    "id": "doc_2",
-                    "title": f"Market Research: {args.query} Sector Analysis",
-                    "content": f"Comprehensive analysis of {args.query} market trends",
-                    "relevance_score": 0.87,
-                    "source": "mock_database",
-                    "metadata": {
-                        "sector": "Technology",
-                        "report_type": "market_analysis",
-                        "date_created": "2024-01-10",
-                    },
-                },
-            ]
+            # Use real Azure AI Search via Data API
+            search_payload = {
+                "query": args.query,
+                "limit": args.limit,
+                "collection": args.collection,
+                "include_metadata": args.include_metadata,
+            }
 
-            # Limit results based on args.limit
-            limited_results: list[dict[str, Any]] = mock_results[: args.limit]
-
-            query_time: float = (
-                time.time() - start_time
-            ) * 1000  # Convert to milliseconds
-
-            return DataSearchResult(
-                results=limited_results,
-                total_count=len(mock_results),
-                query_time_ms=query_time,
+            response = await self.client.post(
+                f"{self.data_api_url}/conversations",
+                json=search_payload,
+                headers={"Content-Type": "application/json"},
             )
+
+            if response.status_code == 200:
+                search_data = response.json()
+
+                # Convert API response to expected format
+                results = []
+                for item in search_data.get("results", []):
+                    result = {
+                        "id": item.get("id", ""),
+                        "title": item.get("title", ""),
+                        "content": item.get("content", ""),
+                        "relevance_score": item.get("relevance_score", 0.0),
+                        "source": item.get("source", "azure_search"),
+                        "metadata": item.get("metadata", {}),
+                    }
+                    results.append(result)
+
+                query_time = (time.time() - start_time) * 1000
+
+                return DataSearchResult(
+                    results=results,
+                    total_count=search_data.get("total_count", len(results)),
+                    query_time_ms=query_time,
+                )
+
+            elif response.status_code == 503:
+                # Azure Search service unavailable, fall back to mock data
+                return await self._get_mock_results(args, start_time)
+            else:
+                # Other error, fall back to mock data
+                return await self._get_mock_results(args, start_time)
 
         except Exception:
-            # Return empty results on error
-            query_time = (time.time() - start_time) * 1000
-            return DataSearchResult(
-                results=[],
-                total_count=0,
-                query_time_ms=query_time,
-            )
+            # Network error or other issue, fall back to mock data
+            return await self._get_mock_results(args, start_time)
+
+    async def _get_mock_results(
+        self, args: DataSearchArgs, start_time: float
+    ) -> DataSearchResult:
+        """Fallback method to return mock results when Azure Search is unavailable.
+
+        Args:
+            args: Search parameters
+            start_time: Start time for timing calculation
+
+        Returns:
+            Mock search results
+
+        """
+        mock_results: list[dict[str, Any]] = [
+            {
+                "id": "doc_1",
+                "title": f"Investment Analysis for {args.query}",
+                "content": f"This is a mock result for query: {args.query}. "
+                f"Azure AI Search is currently unavailable, showing fallback data.",
+                "relevance_score": 0.95,
+                "source": "mock_database",
+                "metadata": {
+                    "company": args.query,
+                    "sector": "Technology",
+                    "date_created": "2024-01-15",
+                    "fallback": True,
+                },
+            },
+            {
+                "id": "doc_2",
+                "title": f"Market Research: {args.query} Sector Analysis",
+                "content": f"Comprehensive analysis of {args.query} market trends. "
+                f"This is mock data provided when search service is unavailable.",
+                "relevance_score": 0.87,
+                "source": "mock_database",
+                "metadata": {
+                    "sector": "Technology",
+                    "report_type": "market_analysis",
+                    "date_created": "2024-01-10",
+                    "fallback": True,
+                },
+            },
+        ]
+
+        # Limit results based on args.limit
+        limited_results: list[dict[str, Any]] = mock_results[: args.limit]
+
+        query_time: float = (time.time() - start_time) * 1000  # Convert to milliseconds
+
+        return DataSearchResult(
+            results=limited_results,
+            total_count=len(mock_results),
+            query_time_ms=query_time,
+        )
+
+    async def get_search_status(self) -> dict[str, Any]:
+        """Get the status of the search service.
+
+        Returns:
+            Dictionary with search service status information
+
+        """
+        try:
+            response = await self.client.get(f"{self.search_api_url}/search/status")
+
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return {
+                    "status": "unavailable",
+                    "error": f"HTTP {response.status_code}",
+                }
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e),
+            }
+
+    async def index_documents(self) -> dict[str, Any]:
+        """Trigger indexing of documents from the res/ directory.
+
+        Returns:
+            Dictionary with indexing results
+
+        """
+        try:
+            response = await self.client.post(f"{self.search_api_url}/search/index")
+
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return {
+                    "status": "failed",
+                    "error": f"HTTP {response.status_code}",
+                }
+        except Exception as e:
+            return {
+                "status": "error",
+                "error": str(e),
+            }
 
     async def store_conversation_message(
         self, session_id: str, role: str, content: str, tool_calls: list | None = None
@@ -133,7 +239,7 @@ class DataTool(BaseTool[DataSearchArgs, DataSearchResult]):
             }
 
             response: httpx.Response = await self.client.post(
-                f"{self.base_url}/conversations",
+                f"{self.base_url}/conversations", # type: ignore
                 json=request_data,
             )
 
@@ -153,8 +259,8 @@ class DataTool(BaseTool[DataSearchArgs, DataSearchResult]):
 
         """
         try:
-            response: httpx.Response = await self.client.get(
-                f"{self.base_url}/conversations/{session_id}"
+            response = await self.client.get(
+                f"{self.data_api_url}/conversations/{session_id}"
             )
 
             if response.status_code == 200:

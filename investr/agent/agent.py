@@ -6,7 +6,14 @@ from autogen_agentchat.agents import AssistantAgent
 from autogen_core.models import ChatCompletionClient
 from autogen_core.tools import BaseTool, StaticWorkbench
 
-from investr.agent.tools import AnalysisTool, DataTool, OpenBBTool, PrintTool
+from investr.agent.tools import (
+    AnalysisTool,
+    ConversationTool,
+    DataTool,
+    OpenBBTool,
+    PrintTool,
+    SearchTool,
+)
 
 
 class InvestmentAgent:
@@ -27,7 +34,10 @@ class InvestmentAgent:
         system_message: Optional[str] = None,
         agent_name: str = "investment_researcher",
     ) -> AssistantAgent:
-        """Create an investment research agent with tools.
+        """Create an investment research agent with legacy combined tools.
+
+        LEGACY: This method uses the legacy DataTool that combines search and conversation.
+        For new implementations, use create_agent_with_separate_tools() instead.
 
         Args:
             model_client: LLM client for the agent
@@ -93,6 +103,64 @@ class InvestmentAgent:
         )
 
         return StaticWorkbench(tools=tools)
+
+    @classmethod
+    def create_agent_with_separate_tools(
+        cls,
+        model_client: ChatCompletionClient,
+        data_api_url: str = "http://data-api:8002",
+        search_api_url: str = "http://search-api:8003",
+        openbb_api_url: str = "http://openbb-api:8001",
+        print_api_url: str = "http://print-api:8000",
+        analysis_api_url: str = "http://analysis-api:8000",
+        system_message: Optional[str] = None,
+        agent_name: str = "investment_researcher",
+    ) -> AssistantAgent:
+        """Create an investment research agent with separate specialized tools.
+
+        This is the recommended approach using dedicated tools for each service:
+        - SearchTool for document search
+        - ConversationTool for conversation storage  
+        - Other specialized tools
+
+        Args:
+            model_client: LLM client for the agent
+            data_api_url: URL for the Data API service (conversations)
+            search_api_url: URL for the Search API service (documents)
+            openbb_api_url: URL for the OpenBB API service
+            print_api_url: URL for the Print API service
+            analysis_api_url: URL for the Analysis API service
+            system_message: Custom system message for the agent
+            agent_name: Name for the agent
+
+        Returns:
+            Configured AssistantAgent with specialized tools
+
+        """
+        # Create specialized tools
+        tools: list[BaseTool] = [
+            SearchTool(search_api_base_url=search_api_url),
+            ConversationTool(data_api_base_url=data_api_url),
+            OpenBBTool(openbb_api_base_url=openbb_api_url),
+            PrintTool(print_api_base_url=print_api_url),
+            AnalysisTool(analysis_api_base_url=analysis_api_url),
+        ]
+
+        # Create workbench with tools
+        workbench = StaticWorkbench(tools=tools)
+
+        # Use default system message if none provided
+        if system_message is None:
+            system_message = cls._get_default_system_message()
+
+        # Create and return the agent
+        return AssistantAgent(
+            name=agent_name,
+            model_client=model_client,
+            handoffs=[],
+            system_message=system_message,
+            workbench=workbench,
+        )
 
     @classmethod
     def _create_tools(
