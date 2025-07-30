@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from autogen_agentchat.agents import AssistantAgent
 from autogen_core.models import ChatCompletionClient
-from autogen_core.tools import BaseTool, StaticWorkbench
+from autogen_core.tools import BaseTool
 
 from investr.agent.tools import (
     AnalysisTool,
@@ -65,32 +65,6 @@ class InvestmentAgent:
             reflect_on_tool_use=True,  # Enable tool result synthesis
             model_client_stream=True,  # Enable streaming for proper response flow
         )
-
-    @classmethod
-    def create_workbench(
-        cls,
-        openbb_api_url: str = "http://openbb-api:8001",
-        analysis_api_url: str = "http://analysis-api:8000",
-        data_api_url: str = "http://data-api:8002",
-    ) -> StaticWorkbench:
-        """Create a workbench with investment research tools.
-
-        Args:
-            openbb_api_url: URL for the OpenBB API service
-            analysis_api_url: URL for the Analysis API service
-            data_api_url: URL for the Data API service
-
-        Returns:
-            Configured StaticWorkbench with investment tools
-
-        """
-        tools: list[BaseTool] = cls._create_tools(
-            openbb_api_url=openbb_api_url,
-            analysis_api_url=analysis_api_url,
-            data_api_url=data_api_url,
-        )
-
-        return StaticWorkbench(tools=tools)
 
     @classmethod
     def _create_tools(
