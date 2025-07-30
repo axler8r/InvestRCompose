@@ -4,10 +4,11 @@ This module provides a wrapper around the OpenBB Platform SDK to standardize
 data access and provide consistent error handling and caching.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Literal
 
 from loguru import logger
+from openbb import obb
 from openbb.package.__extensions__ import Extensions
 from openbb_core.app.static.app_factory import BaseApp
 
@@ -39,9 +40,6 @@ class OpenBBClient:
             return
 
         try:
-            # Import OpenBB here to handle potential installation issues
-            from openbb import obb
-
             self._obb = obb
             self._initialized = True
             logger.info("OpenBB client initialized successfully")
@@ -196,51 +194,29 @@ class OpenBBClient:
             return self._get_mock_quote_data(symbol)
 
     def _get_mock_historical_data(self, symbol: str) -> List[Dict[str, Any]]:
-        """Generate mock historical data for development."""
-        import random
-        from datetime import datetime, timedelta
-
-        base_price: float = random.uniform(100, 200)
-        data = []
-
-        for i in range(30):  # Last 30 days
-            date: datetime = datetime.now() - timedelta(days=i)
-            price_variation: float = random.uniform(-0.05, 0.05)
-            daily_price: float = base_price * (1 + price_variation)
-
-            high: float = daily_price * random.uniform(1.01, 1.05)
-            low: float = daily_price * random.uniform(0.95, 0.99)
-            volume: int = random.randint(1000000, 5000000)
-
-            data.append(
-                {
-                    "date": date.strftime("%Y-%m-%d"),
-                    "open": round(daily_price * random.uniform(0.99, 1.01), 2),
-                    "high": round(high, 2),
-                    "low": round(low, 2),
-                    "close": round(daily_price, 2),
-                    "volume": volume,
-                    "adj_close": round(daily_price, 2),
-                }
-            )
-
-        return data
+        """Generate obviously mock historical data for development."""
+        return [
+            {
+                "date": datetime.now(timezone.utc),
+                "open": 0.00,
+                "high": 0.00,
+                "low": 0.00,
+                "close": 0.00,
+                "volume": 0,
+                "adj_close": 0.00,
+            }
+        ]
 
     def _get_mock_quote_data(self, symbol: str) -> Dict[str, Any]:
-        """Generate mock quote data for development."""
-        import random
-
-        base_price: float = random.uniform(100, 200)
-        change: float = random.uniform(-5, 5)
-
+        """Generate obviously mock quote data for development."""
         return {
             "symbol": symbol,
-            "name": f"{symbol} Inc.",
-            "price": round(base_price, 2),
-            "change": round(change, 2),
-            "change_percent": round((change / base_price) * 100, 2),
-            "volume": random.randint(1000000, 5000000),
-            "market_cap": random.randint(50000000000, 500000000000),
-            "exchange": "NASDAQ",
-            "asset_type": "EQUITY",
+            "name": f"MOCK {symbol} Company",
+            "price": 0.00,
+            "change": 0.00,
+            "change_percent": 0.00,
+            "volume": 0,
+            "market_cap": 0,
+            "exchange": "MOCK_EXCHANGE",
+            "asset_type": "MOCK_EQUITY",
         }
