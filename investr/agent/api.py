@@ -20,6 +20,7 @@ from investr.agent.models import (
     TaskContext,
     TaskPriority,
     TaskType,
+    TokenUsage,
     ToolResult,
 )
 from investr.agent.models import AgentResponse as InternalAgentResponse
@@ -299,11 +300,11 @@ class AgentAPI:
                 tools_used=tools_used,
                 session_id=request.context.session_id,
                 total_execution_time_ms=total_time,
-                token_usage={
-                    "prompt_tokens": 100,
-                    "completion_tokens": 50,
-                    "total_tokens": 150,
-                },
+                token_usage=TokenUsage(
+                    prompt_tokens=100,
+                    completion_tokens=50,
+                    total_tokens=150,
+                ),
             )
 
         except Exception as e:

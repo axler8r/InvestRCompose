@@ -102,7 +102,7 @@ class AgentResponse(BaseModel):
     total_execution_time_ms: Optional[float] = Field(
         None, description="Total execution time"
     )
-    token_usage: Optional[Dict[str, int]] = Field(
+    token_usage: Optional["TokenUsage"] = Field(
         None, description="Token usage statistics"
     )
 
@@ -244,6 +244,8 @@ __all__ = [
     "TaskContext",
     "AgentRequest",
     "AgentResponse",
+    "ToolResult",
+    "TokenUsage",
     # Tool-specific models
     "SearchArgs",
     "SearchResult",
