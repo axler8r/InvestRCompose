@@ -25,6 +25,10 @@ from investr.agent.models import (
 )
 from investr.agent.models import AgentResponse as InternalAgentResponse
 from investr.agent.tools.conversation_tool import ConversationTool
+from investr.common.exceptions import (
+    generic_exception_handler,
+    http_exception_handler,
+)
 from investr.common.schemas import AgentResponse, RequestStatus, UserRequest
 
 
@@ -361,6 +365,10 @@ def create_app(
         description="AI-powered investment research assistant",
         version="1.0.0",
     )
+
+    # Add exception handlers for standardized error responses
+    app.add_exception_handler(HTTPException, http_exception_handler)  # type: ignore
+    app.add_exception_handler(Exception, generic_exception_handler)  # type: ignore
 
     # Initialize agent API
     agent_api = AgentAPI(

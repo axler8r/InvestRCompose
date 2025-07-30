@@ -448,12 +448,26 @@
                 });
 
                 if (!response.ok) {
+                    // Handle ErrorResponse format for non-200 responses
+                    try {
+                        const errorData = await response.json();
+                        if (errorData.error && errorData.message) {
+                            throw new Error(errorData.message);
+                        }
+                    } catch (parseError) {
+                        // If we can't parse the error response, fall back to status
+                        throw new Error(`HTTP ${response.status}`);
+                    }
                     throw new Error(`HTTP ${response.status}`);
                 }
 
                 const data = await response.json();
                 
-                if (data.error) {
+                // Check for ErrorResponse format in successful responses
+                if (data.error && data.message) {
+                    addError(data.message);
+                } else if (data.error) {
+                    // Legacy error format support
                     addError(data.error);
                 } else {
                     addMessage(

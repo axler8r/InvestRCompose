@@ -5,11 +5,15 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional
 
+import uvicorn
 from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse
 from loguru import logger
-import uvicorn
 
+from investr.common.exceptions import (
+    generic_exception_handler,
+    http_exception_handler,
+)
 from investr.data.database import mongodb_client
 from investr.data.models import (
     Conversation,
@@ -47,6 +51,10 @@ def create_app() -> FastAPI:
         version="0.1.0",
         lifespan=lifespan,
     )
+
+    # Add exception handlers for standardized error responses
+    app.add_exception_handler(HTTPException, http_exception_handler)  # type: ignore
+    app.add_exception_handler(Exception, generic_exception_handler)  # type: ignore
 
     @app.get("/health")
     async def health_check() -> JSONResponse:
