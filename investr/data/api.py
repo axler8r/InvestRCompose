@@ -8,6 +8,7 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse
 from loguru import logger
+import uvicorn
 
 from investr.data.database import mongodb_client
 from investr.data.models import (
@@ -266,8 +267,6 @@ def create_app() -> FastAPI:
 app = create_app()
 
 if __name__ == "__main__":
-    import uvicorn
-
     uvicorn.run(
         "investr.data.api:app",
         host="0.0.0.0",

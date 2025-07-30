@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Literal
 
 from loguru import logger
+from openbb import obb
 from openbb.package.__extensions__ import Extensions
 from openbb_core.app.static.app_factory import BaseApp
 
@@ -39,9 +40,6 @@ class OpenBBClient:
             return
 
         try:
-            # Import OpenBB here to handle potential installation issues
-            from openbb import obb
-
             self._obb = obb
             self._initialized = True
             logger.info("OpenBB client initialized successfully")

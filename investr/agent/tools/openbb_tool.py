@@ -4,6 +4,7 @@ import time
 from datetime import date
 from typing import Any, Dict
 
+import httpx
 from autogen_core import CancellationToken
 from autogen_core.tools import BaseTool
 
@@ -49,8 +50,6 @@ class OpenBBTool(BaseTool[MarketDataArgs, MarketDataResult]):
             Market data with prices and metadata
 
         """
-        import httpx
-
         start_time: float = time.time()
 
         try:

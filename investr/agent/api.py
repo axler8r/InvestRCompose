@@ -2,11 +2,13 @@
 
 import os
 import time
+import traceback
 from datetime import datetime
 from typing import AsyncIterator, Dict
 
 import uvicorn
 from autogen_agentchat.agents._assistant_agent import AssistantAgent
+from autogen_core import CancellationToken
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
@@ -14,12 +16,14 @@ from fastapi.responses import StreamingResponse
 from investr.agent.agent import InvestmentAgent
 from investr.agent.models import (
     AgentRequest,
+    ConversationArgs,
     TaskContext,
     TaskPriority,
     TaskType,
     ToolResult,
 )
 from investr.agent.models import AgentResponse as InternalAgentResponse
+from investr.agent.tools.conversation_tool import ConversationTool
 from investr.common.schemas import AgentResponse, RequestStatus, UserRequest
 
 
@@ -58,8 +62,6 @@ class AgentAPI:
         )
 
         # Create ConversationTool for conversation storage
-        from .tools.conversation_tool import ConversationTool
-
         self.conversation_tool = ConversationTool(data_api_base_url=data_api_url)
 
     def _convert_user_request_to_agent_request(
@@ -150,9 +152,6 @@ class AgentAPI:
         """
         # Store user message in conversation
         if self.conversation_tool:
-            from autogen_core import CancellationToken
-            from investr.agent.models import ConversationArgs
-
             conversation_args = ConversationArgs(
                 session_id=user_request.session_id,
                 message={
@@ -176,9 +175,6 @@ class AgentAPI:
 
         # Store assistant response in conversation
         if self.conversation_tool:
-            from autogen_core import CancellationToken
-            from investr.agent.models import ConversationArgs
-
             # Extract tool calls from internal response
             tool_calls = []
             if internal_response.tools_used:
@@ -425,7 +421,5 @@ if __name__ == "__main__":
         uvicorn.run(app, host="0.0.0.0", port=port)
     except Exception as e:
         print(f"Error starting agent API: {e}")
-        import traceback
-
         traceback.print_exc()
         raise
