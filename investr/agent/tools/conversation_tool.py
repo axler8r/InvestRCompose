@@ -1,6 +1,6 @@
 """Data API tool for conversation storage and retrieval."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import httpx
 from autogen_core import CancellationToken
@@ -70,7 +70,7 @@ class ConversationTool(BaseTool[ConversationArgs, ConversationResult]):
                 return ConversationResult(
                     session_id=args.session_id,
                     message_count=1,
-                    stored_at=datetime.utcnow(),
+                    stored_at=datetime.now(timezone.utc),
                 )
 
         except Exception:
@@ -78,7 +78,7 @@ class ConversationTool(BaseTool[ConversationArgs, ConversationResult]):
             return ConversationResult(
                 session_id=args.session_id,
                 message_count=1,
-                stored_at=datetime.utcnow(),
+                stored_at=datetime.now(timezone.utc),
             )
 
     async def get_conversation_history(self, session_id: str) -> list:

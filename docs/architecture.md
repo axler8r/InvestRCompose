@@ -20,9 +20,8 @@ InvestR Compose (Docker Compose) - Current Implementation
 │   ├── Executes agentic workflows using AutoGen framework
 │   ├── Automatic conversation storage with session management
 │   ├── Contains HTTP client tools:
-│   │   ├── DataTool - semantic search capabilities + conversation storage ✓ AZURE AI SEARCH
+│   │   ├── ConversationTool - conversation storage and session management ✓
 │   │   ├── OpenBBTool - market data retrieval via OpenBB API ✓
-│   │   ├── PrintTool - report generation (mock data)
 │   │   └── AnalysisTool - financial analysis (mock data)
 │   └── Streaming and standard response endpoints
 │
@@ -40,14 +39,7 @@ InvestR Compose (Docker Compose) - Current Implementation
 │   ├── Session-based conversation organization
 │   └── RESTful endpoints for conversation management
 │
-├── Search API (FastAPI + Azure AI Search) ✓ IMPLEMENTED
-│   ├── Semantic search with vector embeddings
-│   ├── PDF document processing and chunking
-│   ├── ETF prospectus indexing system
-│   └── Hybrid search capabilities (semantic + vector + text)
-│
 └── Future Services:
-    ├── Print API (FastAPI + Markdown Utils + ReportLab) - PLANNED
     └── Analysis API (FastAPI) - PLANNED
 ```
 
@@ -86,37 +78,18 @@ InvestR Compose (Docker Compose) - Current Implementation
 ### Agent Tools (HTTP Client Implementation)
 These tools are implemented within the Agent API and make HTTP calls to microservices:
 
-#### SearchTool - `search_documents` ✅ NEW DEDICATED TOOL
-- **Purpose**: Semantic search over investment documents only
-- **Status**: Real Azure AI Search integration with vector embeddings
-- **Features**: Document search, indexing, status monitoring
-- **Integration**: Direct HTTP client with Search API (http://search-api:8003)
-- **Fallback**: Graceful degradation to mock data when Azure AI Search unavailable
-
-#### ConversationTool - `store_conversation` ✅ NEW DEDICATED TOOL  
-- **Purpose**: Conversation storage and session management only
+#### ConversationTool - `store_conversation` ✅ IMPLEMENTED
+- **Purpose**: Conversation storage and session management
 - **Status**: Real MongoDB integration for persistent storage
 - **Features**: Store/retrieve conversations, session tracking, message history
 - **Integration**: Direct HTTP client with Data API (http://data-api:8002)
 - **Fallback**: Mock storage when Data API unavailable
-
-#### DataTool - `search_data` ✅ LEGACY COMPATIBILITY
-- **Purpose**: Legacy combined tool for backward compatibility
-- **Status**: Maintains existing interface while using new architecture internally
-- **Features**: Combined search and conversation capabilities (legacy interface)
-- **Integration**: HTTP client with both Data API and Search API
-- **Recommendation**: Use SearchTool + ConversationTool for new implementations
 
 #### OpenBBTool - `get_market_data` ✓ IMPLEMENTED
 - **Purpose**: Real-time and historical market data retrieval
 - **Status**: HTTP client calling OpenBB API service with real market data
 - **Integration**: Fully functional with OpenBB Platform SDK via microservice
 - **Features**: LLM parameter extraction, provider selection, error handling
-
-#### PrintTool - `generate_report`
-- **Purpose**: Professional report generation in multiple formats
-- **Status**: Mock implementation returning structured reports
-- **Future**: Will integrate with Print API (Markdown Utils + ReportLab)
 
 #### AnalysisTool - `analyze_data`
 - **Purpose**: Statistical and financial analysis capabilities
@@ -136,20 +109,6 @@ These services are in various stages of implementation:
 - **Health Monitoring**: Database connection health checks and service monitoring
 - **Single Responsibility**: Focused solely on conversation storage and retrieval
 
-### Search API (FastAPI + Azure AI Search) ✓ IMPLEMENTED
-- **Semantic Search**: Azure AI Search integration with vector embeddings and hybrid search
-- **Document Processing**: PDF text extraction, chunking, and automatic indexing
-- **Vector Embeddings**: OpenAI text-embedding-ada-002 for semantic similarity
-- **Search Endpoints**: `/search`, `/search/status`, `/search/index` for document search operations
-- **RESTful API**: Clean search interface with comprehensive error handling
-- **Single Responsibility**: Focused solely on document search and indexing
-- **Graceful Fallback**: Returns mock data when Azure AI Search is unavailable
-
-#### Print API (FastAPI + Markdown Utils + ReportLab) - PLANNED
-- Professional document generation from structured data
-- Multiple output formats (PDF, HTML, Markdown)
-- Template-based report creation
-
 #### Analysis API (FastAPI) - PLANNED
 - Advanced financial analysis and modeling
 - Time-series analysis and forecasting
@@ -163,7 +122,6 @@ flowchart TD
     C[CLI Interface]
     O[OpenBB API - FastAPI + OpenBB SDK]
     D[Data API - FastAPI + MongoDB]
-    S[Search API - FastAPI + Azure AI Search]
 
     %% Current Implementation (Solid lines)
     A -->|REST API| B
@@ -171,38 +129,27 @@ flowchart TD
     B -->|OpenAI API| G[OpenAI LLM]
     B -->|HTTP API| O
     B -->|HTTP API| D
-    B -->|HTTP API| S
 
-    %% Agent Tools (New Architecture)
-    B -->|Document Search| T1[SearchTool]
+    %% Agent Tools (Simplified Architecture)
     B -->|Conversation Storage| T2[ConversationTool]
     B -->|Market Data| T3[OpenBBTool]
-    B -->|Legacy Compatibility| T4[DataTool]
-    B -.->|Mock Data| T5[PrintTool]
     B -.->|Mock Data| T6[AnalysisTool]
 
     %% Service Integration (Solid lines)
-    T1 -->|REST API| S
     T2 -->|REST API| D
     T3 -->|REST API| O
-    T4 -.->|Legacy| D
-    T4 -.->|Legacy| S
     O -->|SDK Calls| OBB[OpenBB Platform SDK]
     D -->|Async Calls| MongoDB[MongoDB Database]
-    S -->|HTTP API| AzSearch[Azure AI Search]
 
     %% Future Services (Dotted lines)
-    T5 -.->|Future| P[Print API + ReportLab]
     T6 -.->|Future| An[Analysis API]
 
     %% Styling
     classDef implemented fill:#d4edda,stroke:#155724,stroke-width:2px
     classDef planned fill:#fff3cd,stroke:#856404,stroke-width:2px
     classDef external fill:#f8d7da,stroke:#721c24,stroke-width:2px
-    classDef legacy fill:#e2e3e5,stroke:#6c757d,stroke-width:2px,stroke-dasharray: 5 5
 
-    class A,B,C,O,T1,T2,T3,D,S,OBB,MongoDB,AzSearch implemented
-    class T4 legacy
+    class A,B,C,O,T2,T3,D,OBB,MongoDB implemented
     class T5,T6 planned
     class P,An planned
     class G external
@@ -230,64 +177,48 @@ InvestRCompose/
 ├── LICENSE
 ├── docs/
 │   ├── architecture.md
-│   └── agent.md                   # Agent implementation details
-├── investr/                       # Python package source code
-|   ├── agent/                     # ✓ Agent API and AutoGen integration
-|   │   ├── api.py                 # FastAPI wrapper
-|   │   ├── agent.py               # Agent factory and configuration
-|   │   ├── models.py              # Pydantic data models
-|   │   └── tools/                 # AutoGen tool implementations
-|   │       ├── conversation_tool.py  # Conversation storage tool ✅ NEW
-|   │       ├── data_tool.py       # Legacy combined tool (backward compatibility)
-|   │       ├── search_tool.py     # Document search tool ✅ NEW
-|   │       ├── openbb_tool.py     # Market data tool via OpenBB API ✓
-|   │       ├── print_tool.py      # Mock report generation tool
-|   │       └── analysis_tool.py   # Mock analysis tool
-|   ├── web/                       # ✓ Flask web application
-|   │   ├── app.py                 # Web app with chat interface
-|   │   └── templates/             # HTML templates
-|   ├── cli/                       # ✓ Command-line interface
-|   │   └── app.py                 # CLI client implementation
-|   ├── common/                    # ✓ Shared schemas and utilities
-|   │   └── schemas.py             # Common Pydantic models
-|   ├── search/                     # ✓ Search API service (document search)
-|   │   ├── __init__.py            # Package exports
-|   │   ├── api.py                 # FastAPI document search endpoints
-|   │   ├── models.py              # Pydantic models for search operations
-|   │   ├── azure_search_client.py # Azure AI Search client with embeddings
-|   │   └── document_processor.py  # PDF processing and chunking
-|   ├── data/                      # ✓ Data API service (conversation storage)
-|   │   ├── __init__.py            # Package exports
-|   │   ├── api.py                 # FastAPI conversation storage endpoints
-|   │   ├── models.py              # Beanie ODM models for MongoDB
-|   │   └── database.py            # MongoDB async client and health checks
-|   ├── openbb/                    # ✓ OpenBB API service
-|   │   ├── __init__.py            # Package exports
-|   │   ├── api.py                 # FastAPI service endpoints
-|   │   └── openbb_client.py       # OpenBB Platform integration
-|   ├── print/                     # 🚧 Placeholder for Print API
-|   └── analysis/                  # 🚧 Placeholder for Analysis API
-├── tests/                         # ✓ Test suite (12/12 tests passing)
-├── scripts/                       # ✓ Utility scripts
-│   └── index_etf_prospectuses.py  # ETF document indexing script
-├── res/                           # ✓ Sample documents (ETF prospectuses)
-└── app/                           # ✓ Docker deployment configuration
-    ├── compose.yml                # Current: web + agent + data + search + openbb services
-    ├── .env                       # Environment configuration
-    ├── .env.example               # Environment template
-    └── services/                  # Service-specific Dockerfiles
-        ├── web/
-        │   └── Dockerfile         # ✓ Flask web service
-        ├── agent/
-        │   └── Dockerfile         # ✓ Agent API service
-        ├── search/                # ✓ Search API service (document search)
-        │   └── Dockerfile         # ✓ Search API service
-        ├── data/                  # ✓ Data API service (conversation storage)
-        │   └── Dockerfile         # ✓ Data API service
-        ├── openbb/                # ✓ OpenBB API service
-        │   └── Dockerfile         # ✓ OpenBB API service
-        ├── print/                 # 🚧 Future Print API service
-        └── analysis/              # 🚧 Future Analysis API service
+│   └── agent.md                     # Agent implementation details
+├── investr/                         # Python package source code
+|   ├── agent/                       # ✓ Agent API and AutoGen integration
+|   │   ├── api.py                   # FastAPI wrapper
+|   │   ├── agent.py                 # Agent factory and configuration
+|   │   ├── models.py                # Pydantic data models
+|   │   └── tools/                   # AutoGen tool implementations
+|   │       ├── conversation_tool.py # Conversation storage tool ✓
+|   │       ├── openbb_tool.py       # Market data tool via OpenBB API ✓
+|   │       └── analysis_tool.py     # Mock analysis tool
+|   ├── web/                         # ✓ Flask web application
+|   │   ├── app.py                   # Web app with chat interface
+|   │   └── templates/               # HTML templates
+|   ├── cli/                         # ✓ Command-line interface
+|   │   └── app.py                   # CLI client implementation
+|   ├── common/                      # ✓ Shared schemas and utilities
+|   │   └── schemas.py               # Common Pydantic models
+|   ├── data/                        # ✓ Data API service (conversation storage)
+|   │   ├── __init__.py              # Package exports
+|   │   ├── api.py                   # FastAPI conversation storage endpoints
+|   │   ├── models.py                # Beanie ODM models for MongoDB
+|   │   └── database.py              # MongoDB async client and health checks
+|   ├── openbb/                      # ✓ OpenBB API service
+|   │   ├── __init__.py              # Package exports
+|   │   ├── api.py                   # FastAPI service endpoints
+|   │   └── openbb_client.py         # OpenBB Platform integration
+|   └── analysis/                    # 🚧 Placeholder for Analysis API
+├── tests/                           # ✓ Test suite
+└── app/                             # ✓ Docker deployment configuration
+    ├── compose.yml                  # Current: web + agent + data + openbb services
+    ├── .env                         # Environment configuration
+    ├── .env.example                 # Environment template
+    └── services/                    # Service-specific Dockerfiles
+        ├── web/                     # ✓ Flask web service
+        │   └── Dockerfile
+        ├── agent/                   # ✓ Agent API service
+        │   └── Dockerfile
+        ├── data/                    # ✓ Data API service
+        │   └── Dockerfile
+        ├── openbb/                  # ✓ OpenBB API service
+        │   └── Dockerfile
+        └── analysis/                # 🚧 Future Analysis API service
 ```
 
 **Legend:**
@@ -307,11 +238,10 @@ InvestRCompose/
 - This allows services to import from the shared `investr` Python package
 
 ### Current Docker Compose Setup
-The `app/compose.yml` currently defines six services:
+The `app/compose.yml` currently defines five services:
 - **web**: Flask application (port 5000)
 - **agent**: Agent API service (port 8000)
 - **data-api**: Data API service with conversation storage (port 8002) ✓ IMPLEMENTED
-- **search-api**: Search API service with Azure AI Search (port 8003) ✓ IMPLEMENTED
 - **openbb-api**: OpenBB API service (port 8001) ✓ IMPLEMENTED
 - **mongodb**: MongoDB database for conversation persistence (port 27017) ✓ IMPLEMENTED
 - **Network**: `investr-network` for service communication
@@ -319,10 +249,8 @@ The `app/compose.yml` currently defines six services:
 **Service Dependencies:**
 - Web UI → Agent API
 - Agent API → Data API (conversation storage)
-- Agent API → Search API (document search)
 - Agent API → OpenBB API (market data)
 - Data API → MongoDB (document persistence)
-- Search API → Azure AI Search (vector search)
 - All services communicate via `investr-network` bridge network
 
 
@@ -354,32 +282,17 @@ The `app/compose.yml` currently defines six services:
   - Docker containerization with multi-stage builds
   - HTTP client integration in agent tools
   - Type safety with Pydantic models and Literal types
-- [x] **Semantic Search Enhancement**: Add Azure AI Search to Data API ✓ COMPLETE
-  - Vector embeddings for document search with OpenAI text-embedding-ada-002
-  - Semantic search capabilities with hybrid vector + text search
-  - Integration with existing conversation storage
-  - PDF document processing and automatic indexing
-  - RESTful search endpoints with comprehensive error handling
-  - DataTool integration with graceful fallback to mock data
 
-### Phase 4: Semantic Search Implementation (✓ Complete)
-- [x] **Search API Service**: Standalone Azure AI Search microservice ✓ COMPLETE
-  - Full Azure AI Search integration with vector embeddings
-  - Document processing system with intelligent chunking
-  - Hybrid search capabilities (semantic + vector + text search)
-  - Custom search index schema for investment documents
-  - ETF prospectus indexing and search system
-  - Dedicated Search API microservice (port 8003)
-  - SearchTool and ConversationTool separation
-  - Comprehensive error handling and graceful fallbacks
-  - PDF text extraction and metadata processing
-  - HNSW algorithm configuration for optimal performance
+### Phase 4: Architecture Simplification (✓ Complete)
+- [x] **Remove Semantic Search**: Simplify architecture by removing document search ✓ COMPLETE
+  - Removed Search API microservice and Azure AI Search integration
+  - Deleted SearchTool and DataTool from agent tools
+  - Removed ETF document processing and indexing capabilities
+  - Cleaned up Azure AI Search and PDF processing dependencies
+  - Simplified Docker Compose to core services only
+  - Focused architecture on core investment research using OpenBB market data
 
 ### Phase 5: Advanced Services (🔮 Planned)
-- [ ] **Print API Service**: Document generation service
-  - ReportLab for PDF generation
-  - Markdown to HTML conversion
-  - Template management system
 - [ ] **Analysis API Service**: Financial analysis service
   - Time-series analysis capabilities
   - Risk assessment models

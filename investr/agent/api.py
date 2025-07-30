@@ -2,10 +2,13 @@
 
 import os
 import time
+import traceback
+from datetime import datetime
 from typing import AsyncIterator, Dict
 
 import uvicorn
 from autogen_agentchat.agents._assistant_agent import AssistantAgent
+from autogen_core import CancellationToken
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
@@ -13,12 +16,19 @@ from fastapi.responses import StreamingResponse
 from investr.agent.agent import InvestmentAgent
 from investr.agent.models import (
     AgentRequest,
+    ConversationArgs,
     TaskContext,
     TaskPriority,
     TaskType,
+    TokenUsage,
     ToolResult,
 )
 from investr.agent.models import AgentResponse as InternalAgentResponse
+from investr.agent.tools.conversation_tool import ConversationTool
+from investr.common.exceptions import (
+    generic_exception_handler,
+    http_exception_handler,
+)
 from investr.common.schemas import AgentResponse, RequestStatus, UserRequest
 
 
@@ -31,7 +41,6 @@ class AgentAPI:
         model_name: str = "gpt-4o-mini",
         data_api_url: str = "http://data-api:8002",
         openbb_api_url: str = "http://openbb-api:8001",
-        print_api_url: str = "http://print-api:8000",
         analysis_api_url: str = "http://analysis-api:8000",
     ) -> None:
         """Initialize the Agent API.
@@ -41,7 +50,6 @@ class AgentAPI:
             model_name: LLM model to use
             data_api_url: URL for the Data API service
             openbb_api_url: URL for the OpenBB API service
-            print_api_url: URL for the Print API service
             analysis_api_url: URL for the Analysis API service
 
         """
@@ -55,14 +63,11 @@ class AgentAPI:
             model_client=self.model_client,
             data_api_url=data_api_url,
             openbb_api_url=openbb_api_url,
-            print_api_url=print_api_url,
             analysis_api_url=analysis_api_url,
         )
 
-        # Create DataTool for conversation storage
-        from .tools.data_tool import DataTool
-
-        self.data_tool = DataTool(data_api_base_url=data_api_url)
+        # Create ConversationTool for conversation storage
+        self.conversation_tool = ConversationTool(data_api_base_url=data_api_url)
 
     def _convert_user_request_to_agent_request(
         self, user_request: UserRequest
@@ -151,12 +156,17 @@ class AgentAPI:
 
         """
         # Store user message in conversation
-        if self.data_tool:
-            await self.data_tool.store_conversation_message(
+        if self.conversation_tool:
+            conversation_args = ConversationArgs(
                 session_id=user_request.session_id,
-                role="user",
-                content=user_request.message,
+                message={
+                    "role": "user",
+                    "content": user_request.message,
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
+                message_type="user",
             )
+            await self.conversation_tool.run(conversation_args, CancellationToken())
 
         # Convert to internal format
         agent_request: AgentRequest = self._convert_user_request_to_agent_request(
@@ -169,7 +179,7 @@ class AgentAPI:
         )
 
         # Store assistant response in conversation
-        if self.data_tool:
+        if self.conversation_tool:
             # Extract tool calls from internal response
             tool_calls = []
             if internal_response.tools_used:
@@ -183,12 +193,17 @@ class AgentAPI:
                     for tool in internal_response.tools_used
                 ]
 
-            await self.data_tool.store_conversation_message(
+            conversation_args = ConversationArgs(
                 session_id=user_request.session_id,
-                role="assistant",
-                content=internal_response.response,
-                tool_calls=tool_calls if tool_calls else None,
+                message={
+                    "role": "assistant",
+                    "content": internal_response.response,
+                    "tool_calls": tool_calls if tool_calls else None,
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
+                message_type="assistant",
             )
+            await self.conversation_tool.run(conversation_args, CancellationToken())
 
         # Convert back to common schema
         return self._convert_internal_response_to_agent_response(
@@ -289,11 +304,11 @@ class AgentAPI:
                 tools_used=tools_used,
                 session_id=request.context.session_id,
                 total_execution_time_ms=total_time,
-                token_usage={
-                    "prompt_tokens": 100,
-                    "completion_tokens": 50,
-                    "total_tokens": 150,
-                },
+                token_usage=TokenUsage(
+                    prompt_tokens=100,
+                    completion_tokens=50,
+                    total_tokens=150,
+                ),
             )
 
         except Exception as e:
@@ -330,7 +345,6 @@ def create_app(
     model_name: str = "gpt-4o-mini",
     data_api_url: str = "http://data-api:8002",
     openbb_api_url: str = "http://openbb-api:8001",
-    print_api_url: str = "http://print-api:8000",
     analysis_api_url: str = "http://analysis-api:8000",
 ) -> FastAPI:
     """Create a FastAPI application with the investment agent.
@@ -340,7 +354,6 @@ def create_app(
         model_name: LLM model to use
         data_api_url: URL for the Data API service
         openbb_api_url: URL for the OpenBB API service
-        print_api_url: URL for the Print API service
         analysis_api_url: URL for the Analysis API service
 
     Returns:
@@ -353,13 +366,16 @@ def create_app(
         version="1.0.0",
     )
 
+    # Add exception handlers for standardized error responses
+    app.add_exception_handler(HTTPException, http_exception_handler)  # type: ignore
+    app.add_exception_handler(Exception, generic_exception_handler)  # type: ignore
+
     # Initialize agent API
     agent_api = AgentAPI(
         openai_api_key=openai_api_key,
         model_name=model_name,
         data_api_url=data_api_url,
         openbb_api_url=openbb_api_url,
-        print_api_url=print_api_url,
         analysis_api_url=analysis_api_url,
     )
 
@@ -414,7 +430,5 @@ if __name__ == "__main__":
         uvicorn.run(app, host="0.0.0.0", port=port)
     except Exception as e:
         print(f"Error starting agent API: {e}")
-        import traceback
-
         traceback.print_exc()
         raise

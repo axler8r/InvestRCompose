@@ -102,7 +102,7 @@ class AgentResponse(BaseModel):
     total_execution_time_ms: Optional[float] = Field(
         None, description="Total execution time"
     )
-    token_usage: Optional[Dict[str, int]] = Field(
+    token_usage: Optional["TokenUsage"] = Field(
         None, description="Token usage statistics"
     )
 
@@ -121,27 +121,6 @@ class TokenUsage(BaseModel):
 
 
 # Tool-specific models
-
-
-class SearchArgs(BaseModel):
-    """Arguments for document search tool."""
-
-    query: str = Field(..., description="Search query for investment documents")
-    collection: str = Field("default", description="Document collection to search in")
-    limit: int = Field(10, description="Maximum number of results to return")
-    include_metadata: bool = Field(
-        True, description="Whether to include result metadata"
-    )
-
-
-class SearchResult(BaseModel):
-    """Result from document search tool."""
-
-    results: List[Dict[str, Any]] = Field(..., description="Search results")
-    total_count: int = Field(..., description="Total number of matching results")
-    query_time_ms: float = Field(..., description="Query execution time")
-
-
 class ConversationArgs(BaseModel):
     """Arguments for conversation storage tool."""
 
@@ -156,25 +135,6 @@ class ConversationResult(BaseModel):
     session_id: str = Field(..., description="Session identifier")
     message_count: int = Field(..., description="Total messages in conversation")
     stored_at: datetime = Field(..., description="When the message was stored")
-
-
-class DataSearchArgs(BaseModel):
-    """Arguments for data search tool."""
-
-    query: str = Field(..., description="Search query for investment data")
-    collection: str = Field("default", description="Data collection to search in")
-    limit: int = Field(10, description="Maximum number of results to return")
-    include_metadata: bool = Field(
-        True, description="Whether to include result metadata"
-    )
-
-
-class DataSearchResult(BaseModel):
-    """Result from data search tool."""
-
-    results: List[Dict[str, Any]] = Field(..., description="Search results")
-    total_count: int = Field(..., description="Total number of matching results")
-    query_time_ms: float = Field(..., description="Query execution time")
 
 
 class MarketDataArgs(BaseModel):
@@ -192,26 +152,6 @@ class MarketDataResult(BaseModel):
     symbol: str = Field(..., description="Stock symbol")
     data: List[Dict[str, Any]] = Field(..., description="Market data points")
     metadata: Dict[str, Any] = Field(..., description="Data metadata")
-
-
-class ReportGenerationArgs(BaseModel):
-    """Arguments for report generation tool."""
-
-    title: str = Field(..., description="Report title")
-    content: str = Field(..., description="Report content in markdown")
-    format: str = Field("pdf", description="Output format (pdf, html, markdown)")
-    template: Optional[str] = Field(None, description="Report template to use")
-
-
-class ReportGenerationResult(BaseModel):
-    """Result from report generation tool."""
-
-    report_id: str = Field(
-        ..., description="Unique identifier for the generated report"
-    )
-    download_url: str = Field(..., description="URL to download the report")
-    format: str = Field(..., description="Report format")
-    size_bytes: int = Field(..., description="Report file size in bytes")
 
 
 class AnalysisArgs(BaseModel):
@@ -240,21 +180,17 @@ __all__ = [
     # Enums
     "TaskType",
     "TaskPriority",
-    # Core models  
+    # Core models
     "TaskContext",
     "AgentRequest",
     "AgentResponse",
+    "ToolResult",
+    "TokenUsage",
     # Tool-specific models
-    "SearchArgs",
-    "SearchResult", 
     "ConversationArgs",
     "ConversationResult",
-    "DataSearchArgs",
-    "DataSearchResult",
     "MarketDataArgs",
     "MarketDataResult",
-    "ReportGenerationArgs",
-    "ReportGenerationResult",
     "AnalysisArgs",
     "AnalysisResult",
 ]

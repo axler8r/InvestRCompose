@@ -1,6 +1,6 @@
-author: axl
-date: 2025-07-30
-version: 0.7.0
+authors: axl,
+date: 2025-07-31
+version: 0.7.1
 ---
 # Changelog
 
@@ -8,6 +8,102 @@ All notable changes to the InvestR project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+
+## 0.7.1
+**2025-07-31**
+
+### Added
+- **ErrorResponse Standardization**
+  - Implemented unified error handling across all microservices
+  - Created `investr.common.exceptions` module with standardized exception utilities
+  - Added `create_error_response()` function for structured ErrorResponse format
+  - Implemented `http_exception_handler()` for HTTPException conversion
+  - Added `generic_exception_handler()` for unexpected exception handling
+
+- **Exception Handler Integration**
+  - Registered exception handlers in Agent API (FastAPI + AutoGen)
+  - Added ErrorResponse support to Data API (conversation storage)
+  - Integrated standardized error handling in OpenBB API (market data)
+  - Enhanced Web UI JavaScript to handle both ErrorResponse and legacy formats
+
+- **Comprehensive Documentation**
+  - Updated README.md with complete project overview and quick start guide
+  - Added detailed service descriptions and technology stack information
+  - Created comprehensive ErrorResponse implementation documentation
+  - Enhanced project structure documentation and development guidelines
+
+### Changed
+- **Error Handling Architecture**
+  - Migrated from inconsistent HTTPException responses to structured ErrorResponse format
+  - Standardized error type mapping (400→BadRequest, 401→Unauthorized, 404→NotFound, etc.)
+  - Improved error parsing and display in web interface
+  - Enhanced debugging capabilities with structured error details
+
+- **Code Quality Improvements**
+  - Applied consistent error handling patterns across all FastAPI services
+  - Added type safety annotations for exception handlers
+  - Improved backward compatibility while introducing new standards
+  - Enhanced logging and error tracking capabilities
+
+- **Web Interface Enhancement**
+  - Updated JavaScript error handling to support ErrorResponse format
+  - Maintained backward compatibility with legacy error responses
+  - Improved error message display and user feedback
+  - Enhanced error parsing for both successful and failed HTTP responses
+
+### Removed
+- **Semantic Search Components**
+  - Removed Semantic Search API service
+  - Deleted `AzureSearchClient` and related document management code
+  - Removed semantic search capabilities and vector embeddings
+  - Eliminated hybrid search implementation and HNSW algorithm configuration
+
+- **Print Service Components**
+  - Removed `PrintTool` from agent tool orchestration
+  - Cleaned up print service references from agent factory
+  - Simplified agent architecture to focus on core functionality (3 tools instead of 4)
+  - Removed unused print service Docker configurations and placeholders
+
+- **Architecture Simplification**
+  - Streamlined microservice architecture by removing non-essential services
+  - Focused on core investment research capabilities
+  - Reduced complexity in agent tool management and orchestration
+
+- **Schema**
+  - Removed unused schema classes
+
+### Technical Details
+
+#### Error Response Schema
+```json
+{
+    "error": "ErrorType",
+    "message": "Human-readable error message",
+    "details": {
+        "additional": "context_data"
+    }
+}
+```
+
+#### Exception Handler Implementation
+- **Agent API**: Registered HTTPException and generic Exception handlers
+- **Data API**: Integrated ErrorResponse for conversation storage operations
+- **OpenBB API**: Added standardized error responses for market data endpoints
+- **Web UI**: Enhanced JavaScript with dual-format error support
+
+#### Backward Compatibility
+- Web interface supports both ErrorResponse format and legacy error handling
+- Existing API contracts maintained while adding structured error responses
+- Graceful fallback mechanisms for error parsing and display
+
+### Benefits
+- **Consistent Error Format**: All microservices return errors in the same structured format
+- **Better Error Handling**: Frontend can reliably parse and display error messages
+- **Improved Debugging**: Structured error details help with troubleshooting
+- **Type Safety**: Pydantic-based ErrorResponse ensures schema validation
+- **Maintainability**: Centralized exception handling reduces code duplication
+
 
 ## 0.7.0
 **2025-07-30**
@@ -96,23 +192,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Environment Management**: Enhanced configuration for Azure services
 - **Logging**: Comprehensive logging with loguru integration
 
-### Current Status
-- [×] **Phase 1**: Core Agent Implementation (Complete)
-- [×] **Phase 2**: Conversation Storage (Complete)
-- [×] **Phase 3**: OpenBB Microservice Integration (Complete)
-- [×] **Phase 4**: Semantic Search Implementation (Complete) ✅ NEW
-  - Azure AI Search integration with vector embeddings
-  - Document processing and intelligent chunking
-  - Hybrid search capabilities (semantic + vector + text)
-  - ETF prospectus indexing and search system
-  - Dedicated Search API microservice
-- [ ] **Phase 5**: Advanced Services (Planned)
-  - Print API Service (ReportLab integration)
-  - Analysis API Service (Financial analysis)
-- [ ] **Phase 6**: Production Readiness (Future)
-  - Authentication & Security
-  - Monitoring & Observability
-  - Performance Optimization
 
 ## 0.6.0
 **2025-07-28**
@@ -235,15 +314,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added CLI interface for testing and development
 - Implemented hot-reloading and development-friendly configurations
 - Created comprehensive test coverage and quality checks
-
-### Current Status
-- [×] **Phase 1**: Core Agent Implementation (Complete)
-- [×] **Phase 2**: Conversation Storage (Complete)
-- [×] **Phase 3**: OpenBB Microservice Integration (Complete)
-- [ ] **Phase 4**: Advanced Services (Planned)
-  - Print API Service (ReportLab integration)
-  - Analysis API Service (Financial analysis)
-- [ ] **Phase 5**: Production Readiness (Future)
-  - Authentication & Security
-  - Monitoring & Observability
-  - Performance Optimization

@@ -11,6 +11,10 @@ from typing import Annotated, Any, Dict, List
 import uvicorn
 from fastapi import FastAPI, HTTPException, Query
 
+from investr.common.exceptions import (
+    generic_exception_handler,
+    http_exception_handler,
+)
 from investr.common.schemas import HealthCheck
 from investr.openbb.openbb_client import OpenBBClient
 
@@ -36,6 +40,10 @@ class OpenBBAPI:
             docs_url="/docs",
             redoc_url="/redoc",
         )
+
+        # Add exception handlers for standardized error responses
+        app.add_exception_handler(HTTPException, http_exception_handler)  # type: ignore
+        app.add_exception_handler(Exception, generic_exception_handler)  # type: ignore
 
         @app.get("/health")
         async def health_check() -> HealthCheck:

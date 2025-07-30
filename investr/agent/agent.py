@@ -4,15 +4,12 @@ from typing import List, Optional
 
 from autogen_agentchat.agents import AssistantAgent
 from autogen_core.models import ChatCompletionClient
-from autogen_core.tools import BaseTool, StaticWorkbench
+from autogen_core.tools import BaseTool
 
 from investr.agent.tools import (
     AnalysisTool,
     ConversationTool,
-    DataTool,
     OpenBBTool,
-    PrintTool,
-    SearchTool,
 )
 
 
@@ -27,24 +24,19 @@ class InvestmentAgent:
     def create_agent(
         cls,
         model_client: ChatCompletionClient,
-        data_api_url: str = "http://data-api:8000",
         openbb_api_url: str = "http://openbb-api:8001",
-        print_api_url: str = "http://print-api:8000",
         analysis_api_url: str = "http://analysis-api:8000",
+        data_api_url: str = "http://data-api:8002",
         system_message: Optional[str] = None,
         agent_name: str = "investment_researcher",
     ) -> AssistantAgent:
-        """Create an investment research agent with legacy combined tools.
-
-        LEGACY: This method uses the legacy DataTool that combines search and conversation.
-        For new implementations, use create_agent_with_separate_tools() instead.
+        """Create an investment research agent with specialized tools.
 
         Args:
             model_client: LLM client for the agent
-            data_api_url: URL for the Data API service
             openbb_api_url: URL for the OpenBB API service
-            print_api_url: URL for the Print API service
             analysis_api_url: URL for the Analysis API service
+            data_api_url: URL for the Data API service (conversations)
             system_message: Custom system message for the agent
             agent_name: Name for the agent
 
@@ -54,10 +46,9 @@ class InvestmentAgent:
         """
         # Create tools
         tools: list[BaseTool] = cls._create_tools(
-            data_api_url=data_api_url,
             openbb_api_url=openbb_api_url,
-            print_api_url=print_api_url,
             analysis_api_url=analysis_api_url,
+            data_api_url=data_api_url,
         )
 
         # Create default system message if none provided
@@ -76,116 +67,26 @@ class InvestmentAgent:
         )
 
     @classmethod
-    def create_workbench(
-        cls,
-        data_api_url: str = "http://data-api:8000",
-        openbb_api_url: str = "http://openbb-api:8001",
-        print_api_url: str = "http://print-api:8000",
-        analysis_api_url: str = "http://analysis-api:8000",
-    ) -> StaticWorkbench:
-        """Create a workbench with investment research tools.
-
-        Args:
-            data_api_url: URL for the Data API service
-            openbb_api_url: URL for the OpenBB API service
-            print_api_url: URL for the Print API service
-            analysis_api_url: URL for the Analysis API service
-
-        Returns:
-            Configured StaticWorkbench with investment tools
-
-        """
-        tools: list[BaseTool] = cls._create_tools(
-            data_api_url=data_api_url,
-            openbb_api_url=openbb_api_url,
-            print_api_url=print_api_url,
-            analysis_api_url=analysis_api_url,
-        )
-
-        return StaticWorkbench(tools=tools)
-
-    @classmethod
-    def create_agent_with_separate_tools(
-        cls,
-        model_client: ChatCompletionClient,
-        data_api_url: str = "http://data-api:8002",
-        search_api_url: str = "http://search-api:8003",
-        openbb_api_url: str = "http://openbb-api:8001",
-        print_api_url: str = "http://print-api:8000",
-        analysis_api_url: str = "http://analysis-api:8000",
-        system_message: Optional[str] = None,
-        agent_name: str = "investment_researcher",
-    ) -> AssistantAgent:
-        """Create an investment research agent with separate specialized tools.
-
-        This is the recommended approach using dedicated tools for each service:
-        - SearchTool for document search
-        - ConversationTool for conversation storage  
-        - Other specialized tools
-
-        Args:
-            model_client: LLM client for the agent
-            data_api_url: URL for the Data API service (conversations)
-            search_api_url: URL for the Search API service (documents)
-            openbb_api_url: URL for the OpenBB API service
-            print_api_url: URL for the Print API service
-            analysis_api_url: URL for the Analysis API service
-            system_message: Custom system message for the agent
-            agent_name: Name for the agent
-
-        Returns:
-            Configured AssistantAgent with specialized tools
-
-        """
-        # Create specialized tools
-        tools: list[BaseTool] = [
-            SearchTool(search_api_base_url=search_api_url),
-            ConversationTool(data_api_base_url=data_api_url),
-            OpenBBTool(openbb_api_base_url=openbb_api_url),
-            PrintTool(print_api_base_url=print_api_url),
-            AnalysisTool(analysis_api_base_url=analysis_api_url),
-        ]
-
-        # Create workbench with tools
-        workbench = StaticWorkbench(tools=tools)
-
-        # Use default system message if none provided
-        if system_message is None:
-            system_message = cls._get_default_system_message()
-
-        # Create and return the agent
-        return AssistantAgent(
-            name=agent_name,
-            model_client=model_client,
-            handoffs=[],
-            system_message=system_message,
-            workbench=workbench,
-        )
-
-    @classmethod
     def _create_tools(
         cls,
-        data_api_url: str,
         openbb_api_url: str,
-        print_api_url: str,
         analysis_api_url: str,
+        data_api_url: str,
     ) -> List[BaseTool]:
         """Create the investment research tools.
 
         Args:
-            data_api_url: URL for the Data API service
             openbb_api_url: URL for the OpenBB API service
-            print_api_url: URL for the Print API service
             analysis_api_url: URL for the Analysis API service
+            data_api_url: URL for the Data API service
 
         Returns:
             List of configured tools
 
         """
         return [
-            DataTool(data_api_base_url=data_api_url),
+            ConversationTool(data_api_base_url=data_api_url),
             OpenBBTool(openbb_api_base_url=openbb_api_url),
-            PrintTool(print_api_base_url=print_api_url),
             AnalysisTool(analysis_api_base_url=analysis_api_url),
         ]
 
@@ -200,17 +101,15 @@ class InvestmentAgent:
         return """You are an expert investment research assistant with access to powerful analytical tools.
 
 Your capabilities include:
-- Searching and retrieving investment data using semantic search
+- Storing and retrieving conversation history for context and reference
 - Fetching real-time and historical market data for stocks and financial instruments  
 - Performing statistical and financial analysis on data
-- Generating professional investment reports in various formats
 
 When helping users with investment research:
 
-1. **Data Collection**: Use the search_data tool to find relevant company information, financial statements, and market research
-2. **Market Analysis**: Use get_market_data to retrieve current prices, historical data, and market metrics
-3. **Statistical Analysis**: Use analyze_data to perform trend analysis, risk assessment, and generate insights
-4. **Report Generation**: Use generate_report to create professional documents with your findings
+1. **Market Analysis**: Use get_market_data to retrieve current prices, historical data, and market metrics
+2. **Statistical Analysis**: Use analyze_data to perform trend analysis, risk assessment, and generate insights
+3. **Conversation Management**: Use store_conversation to maintain context across interactions
 
 Best Practices:
 - Always verify data sources and recency when making investment recommendations
