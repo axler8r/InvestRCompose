@@ -1,6 +1,7 @@
 """OpenBB API tool for investment research agent."""
 
 import time
+from datetime import date
 from typing import Any, Dict
 
 from autogen_core import CancellationToken
@@ -85,35 +86,17 @@ class OpenBBTool(BaseTool[MarketDataArgs, MarketDataResult]):
     def _get_mock_data(
         self, args: MarketDataArgs, start_time: float
     ) -> MarketDataResult:
-        """Generate mock data as fallback."""
+        """Generate obviously mock data as fallback."""
         mock_data: list[dict[str, Any]] = [
             {
-                "date": "2024-01-15",
-                "open": 150.25,
-                "high": 152.80,
-                "low": 149.50,
-                "close": 151.75,
-                "volume": 2500000,
-                "adj_close": 151.75,
-            },
-            {
-                "date": "2024-01-14",
-                "open": 148.90,
-                "high": 150.45,
-                "low": 148.20,
-                "close": 150.25,
-                "volume": 2200000,
-                "adj_close": 150.25,
-            },
-            {
-                "date": "2024-01-13",
-                "open": 147.50,
-                "high": 149.20,
-                "low": 147.10,
-                "close": 148.90,
-                "volume": 1900000,
-                "adj_close": 148.90,
-            },
+                "date": date.today().isoformat(),
+                "open": 0.00,
+                "high": 0.00,
+                "low": 0.00,
+                "close": 0.00,
+                "volume": 0,
+                "adj_close": 0.00,
+            }
         ]
 
         metadata: dict[str, Any] = {
@@ -122,11 +105,11 @@ class OpenBBTool(BaseTool[MarketDataArgs, MarketDataResult]):
             "period": args.period,
             "interval": args.interval,
             "currency": "USD",
-            "exchange": "NASDAQ",
-            "timezone": "US/Eastern",
-            "last_updated": "2024-01-15T16:00:00Z",
+            "exchange": "MOCK_EXCHANGE",
+            "timezone": "UTC",
+            "last_updated": date.today().isoformat(),
             "query_time_ms": (time.time() - start_time) * 1000,
-            "source": "mock_data",
+            "source": "MOCK_DATA_FALLBACK",
         }
 
         return MarketDataResult(symbol=args.symbol, data=mock_data, metadata=metadata)

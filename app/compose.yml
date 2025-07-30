@@ -28,7 +28,6 @@ services:
       - OPENBB_API_URL=${OPENBB_API_URL:-http://openbb-api:8001}
       - DATA_API_URL=${DATA_API_URL:-http://data-api:8002}
       - ANALYSIS_API_URL=${ANALYSIS_API_URL:-http://analysis-api:8004}
-      - PRINT_API_URL=${PRINT_API_URL:-http://print-api:8005}
     depends_on:
       - openbb-api
       - data-api

@@ -32,7 +32,6 @@ class AgentAPI:
         model_name: str = "gpt-4o-mini",
         data_api_url: str = "http://data-api:8002",
         openbb_api_url: str = "http://openbb-api:8001",
-        print_api_url: str = "http://print-api:8000",
         analysis_api_url: str = "http://analysis-api:8000",
     ) -> None:
         """Initialize the Agent API.
@@ -42,7 +41,6 @@ class AgentAPI:
             model_name: LLM model to use
             data_api_url: URL for the Data API service
             openbb_api_url: URL for the OpenBB API service
-            print_api_url: URL for the Print API service
             analysis_api_url: URL for the Analysis API service
 
         """
@@ -56,7 +54,6 @@ class AgentAPI:
             model_client=self.model_client,
             data_api_url=data_api_url,
             openbb_api_url=openbb_api_url,
-            print_api_url=print_api_url,
             analysis_api_url=analysis_api_url,
         )
 
@@ -347,7 +344,6 @@ def create_app(
     model_name: str = "gpt-4o-mini",
     data_api_url: str = "http://data-api:8002",
     openbb_api_url: str = "http://openbb-api:8001",
-    print_api_url: str = "http://print-api:8000",
     analysis_api_url: str = "http://analysis-api:8000",
 ) -> FastAPI:
     """Create a FastAPI application with the investment agent.
@@ -357,7 +353,6 @@ def create_app(
         model_name: LLM model to use
         data_api_url: URL for the Data API service
         openbb_api_url: URL for the OpenBB API service
-        print_api_url: URL for the Print API service
         analysis_api_url: URL for the Analysis API service
 
     Returns:
@@ -376,7 +371,6 @@ def create_app(
         model_name=model_name,
         data_api_url=data_api_url,
         openbb_api_url=openbb_api_url,
-        print_api_url=print_api_url,
         analysis_api_url=analysis_api_url,
     )
 

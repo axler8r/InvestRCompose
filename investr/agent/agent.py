@@ -10,7 +10,6 @@ from investr.agent.tools import (
     AnalysisTool,
     ConversationTool,
     OpenBBTool,
-    PrintTool,
 )
 
 
@@ -26,7 +25,6 @@ class InvestmentAgent:
         cls,
         model_client: ChatCompletionClient,
         openbb_api_url: str = "http://openbb-api:8001",
-        print_api_url: str = "http://print-api:8000",
         analysis_api_url: str = "http://analysis-api:8000",
         data_api_url: str = "http://data-api:8002",
         system_message: Optional[str] = None,
@@ -37,7 +35,6 @@ class InvestmentAgent:
         Args:
             model_client: LLM client for the agent
             openbb_api_url: URL for the OpenBB API service
-            print_api_url: URL for the Print API service
             analysis_api_url: URL for the Analysis API service
             data_api_url: URL for the Data API service (conversations)
             system_message: Custom system message for the agent
@@ -50,7 +47,6 @@ class InvestmentAgent:
         # Create tools
         tools: list[BaseTool] = cls._create_tools(
             openbb_api_url=openbb_api_url,
-            print_api_url=print_api_url,
             analysis_api_url=analysis_api_url,
             data_api_url=data_api_url,
         )
@@ -74,7 +70,6 @@ class InvestmentAgent:
     def create_workbench(
         cls,
         openbb_api_url: str = "http://openbb-api:8001",
-        print_api_url: str = "http://print-api:8000",
         analysis_api_url: str = "http://analysis-api:8000",
         data_api_url: str = "http://data-api:8002",
     ) -> StaticWorkbench:
@@ -82,7 +77,6 @@ class InvestmentAgent:
 
         Args:
             openbb_api_url: URL for the OpenBB API service
-            print_api_url: URL for the Print API service
             analysis_api_url: URL for the Analysis API service
             data_api_url: URL for the Data API service
 
@@ -92,7 +86,6 @@ class InvestmentAgent:
         """
         tools: list[BaseTool] = cls._create_tools(
             openbb_api_url=openbb_api_url,
-            print_api_url=print_api_url,
             analysis_api_url=analysis_api_url,
             data_api_url=data_api_url,
         )
@@ -103,7 +96,6 @@ class InvestmentAgent:
     def _create_tools(
         cls,
         openbb_api_url: str,
-        print_api_url: str,
         analysis_api_url: str,
         data_api_url: str,
     ) -> List[BaseTool]:
@@ -111,7 +103,6 @@ class InvestmentAgent:
 
         Args:
             openbb_api_url: URL for the OpenBB API service
-            print_api_url: URL for the Print API service
             analysis_api_url: URL for the Analysis API service
             data_api_url: URL for the Data API service
 
@@ -122,7 +113,6 @@ class InvestmentAgent:
         return [
             ConversationTool(data_api_base_url=data_api_url),
             OpenBBTool(openbb_api_base_url=openbb_api_url),
-            PrintTool(print_api_base_url=print_api_url),
             AnalysisTool(analysis_api_base_url=analysis_api_url),
         ]
 
@@ -140,14 +130,12 @@ Your capabilities include:
 - Storing and retrieving conversation history for context and reference
 - Fetching real-time and historical market data for stocks and financial instruments  
 - Performing statistical and financial analysis on data
-- Generating professional investment reports in various formats
 
 When helping users with investment research:
 
 1. **Market Analysis**: Use get_market_data to retrieve current prices, historical data, and market metrics
 2. **Statistical Analysis**: Use analyze_data to perform trend analysis, risk assessment, and generate insights
-3. **Report Generation**: Use generate_report to create professional documents with your findings
-4. **Conversation Management**: Use store_conversation to maintain context across interactions
+3. **Conversation Management**: Use store_conversation to maintain context across interactions
 
 Best Practices:
 - Always verify data sources and recency when making investment recommendations
