@@ -240,13 +240,13 @@ __all__ = [
     # Enums
     "TaskType",
     "TaskPriority",
-    # Core models  
+    # Core models
     "TaskContext",
     "AgentRequest",
     "AgentResponse",
     # Tool-specific models
     "SearchArgs",
-    "SearchResult", 
+    "SearchResult",
     "ConversationArgs",
     "ConversationResult",
     "DataSearchArgs",

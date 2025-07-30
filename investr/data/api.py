@@ -153,10 +153,10 @@ def create_app() -> FastAPI:
             return ConversationHistoryResponse(
                 session_id=conversation.session_id,
                 messages=messages,
-                total_messages=len(conversation.messages), # type: ignore
+                total_messages=len(conversation.messages),  # type: ignore
                 created_at=conversation.created_at,
                 updated_at=conversation.updated_at,
-            ) # type: ignore
+            )  # type: ignore
 
         except HTTPException:
             raise

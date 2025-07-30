@@ -2,6 +2,7 @@
 
 import os
 import time
+from datetime import datetime
 from typing import AsyncIterator, Dict
 
 import uvicorn
@@ -59,10 +60,10 @@ class AgentAPI:
             analysis_api_url=analysis_api_url,
         )
 
-        # Create DataTool for conversation storage
-        from .tools.data_tool import DataTool
+        # Create ConversationTool for conversation storage
+        from .tools.conversation_tool import ConversationTool
 
-        self.data_tool = DataTool(data_api_base_url=data_api_url)
+        self.conversation_tool = ConversationTool(data_api_base_url=data_api_url)
 
     def _convert_user_request_to_agent_request(
         self, user_request: UserRequest
@@ -151,12 +152,20 @@ class AgentAPI:
 
         """
         # Store user message in conversation
-        if self.data_tool:
-            await self.data_tool.store_conversation_message(
+        if self.conversation_tool:
+            from autogen_core import CancellationToken
+            from investr.agent.models import ConversationArgs
+
+            conversation_args = ConversationArgs(
                 session_id=user_request.session_id,
-                role="user",
-                content=user_request.message,
+                message={
+                    "role": "user",
+                    "content": user_request.message,
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
+                message_type="user",
             )
+            await self.conversation_tool.run(conversation_args, CancellationToken())
 
         # Convert to internal format
         agent_request: AgentRequest = self._convert_user_request_to_agent_request(
@@ -169,7 +178,10 @@ class AgentAPI:
         )
 
         # Store assistant response in conversation
-        if self.data_tool:
+        if self.conversation_tool:
+            from autogen_core import CancellationToken
+            from investr.agent.models import ConversationArgs
+
             # Extract tool calls from internal response
             tool_calls = []
             if internal_response.tools_used:
@@ -183,12 +195,17 @@ class AgentAPI:
                     for tool in internal_response.tools_used
                 ]
 
-            await self.data_tool.store_conversation_message(
+            conversation_args = ConversationArgs(
                 session_id=user_request.session_id,
-                role="assistant",
-                content=internal_response.response,
-                tool_calls=tool_calls if tool_calls else None,
+                message={
+                    "role": "assistant",
+                    "content": internal_response.response,
+                    "tool_calls": tool_calls if tool_calls else None,
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
+                message_type="assistant",
             )
+            await self.conversation_tool.run(conversation_args, CancellationToken())
 
         # Convert back to common schema
         return self._convert_internal_response_to_agent_response(
