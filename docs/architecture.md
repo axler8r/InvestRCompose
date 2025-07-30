@@ -22,7 +22,6 @@ InvestR Compose (Docker Compose) - Current Implementation
 │   ├── Contains HTTP client tools:
 │   │   ├── ConversationTool - conversation storage and session management ✓
 │   │   ├── OpenBBTool - market data retrieval via OpenBB API ✓
-│   │   ├── PrintTool - report generation (mock data)
 │   │   └── AnalysisTool - financial analysis (mock data)
 │   └── Streaming and standard response endpoints
 │
@@ -41,7 +40,6 @@ InvestR Compose (Docker Compose) - Current Implementation
 │   └── RESTful endpoints for conversation management
 │
 └── Future Services:
-    ├── Print API (FastAPI + Markdown Utils + ReportLab) - PLANNED
     └── Analysis API (FastAPI) - PLANNED
 ```
 
@@ -80,7 +78,7 @@ InvestR Compose (Docker Compose) - Current Implementation
 ### Agent Tools (HTTP Client Implementation)
 These tools are implemented within the Agent API and make HTTP calls to microservices:
 
-#### ConversationTool - `store_conversation` ✅ IMPLEMENTED  
+#### ConversationTool - `store_conversation` ✅ IMPLEMENTED
 - **Purpose**: Conversation storage and session management
 - **Status**: Real MongoDB integration for persistent storage
 - **Features**: Store/retrieve conversations, session tracking, message history
@@ -92,11 +90,6 @@ These tools are implemented within the Agent API and make HTTP calls to microser
 - **Status**: HTTP client calling OpenBB API service with real market data
 - **Integration**: Fully functional with OpenBB Platform SDK via microservice
 - **Features**: LLM parameter extraction, provider selection, error handling
-
-#### PrintTool - `generate_report`
-- **Purpose**: Professional report generation in multiple formats
-- **Status**: Mock implementation returning structured reports
-- **Future**: Will integrate with Print API (Markdown Utils + ReportLab)
 
 #### AnalysisTool - `analyze_data`
 - **Purpose**: Statistical and financial analysis capabilities
@@ -115,11 +108,6 @@ These services are in various stages of implementation:
 - **Type Safety**: Complete Pydantic model validation throughout storage pipeline
 - **Health Monitoring**: Database connection health checks and service monitoring
 - **Single Responsibility**: Focused solely on conversation storage and retrieval
-
-#### Print API (FastAPI + Markdown Utils + ReportLab) - PLANNED
-- Professional document generation from structured data
-- Multiple output formats (PDF, HTML, Markdown)
-- Template-based report creation
 
 #### Analysis API (FastAPI) - PLANNED
 - Advanced financial analysis and modeling
@@ -145,7 +133,6 @@ flowchart TD
     %% Agent Tools (Simplified Architecture)
     B -->|Conversation Storage| T2[ConversationTool]
     B -->|Market Data| T3[OpenBBTool]
-    B -.->|Mock Data| T5[PrintTool]
     B -.->|Mock Data| T6[AnalysisTool]
 
     %% Service Integration (Solid lines)
@@ -155,7 +142,6 @@ flowchart TD
     D -->|Async Calls| MongoDB[MongoDB Database]
 
     %% Future Services (Dotted lines)
-    T5 -.->|Future| P[Print API + ReportLab]
     T6 -.->|Future| An[Analysis API]
 
     %% Styling
@@ -191,51 +177,48 @@ InvestRCompose/
 ├── LICENSE
 ├── docs/
 │   ├── architecture.md
-│   └── agent.md                   # Agent implementation details
-├── investr/                       # Python package source code
-|   ├── agent/                     # ✓ Agent API and AutoGen integration
-|   │   ├── api.py                 # FastAPI wrapper
-|   │   ├── agent.py               # Agent factory and configuration
-|   │   ├── models.py              # Pydantic data models
-|   │   └── tools/                 # AutoGen tool implementations
-|   │       ├── conversation_tool.py  # Conversation storage tool ✓
-|   │       ├── openbb_tool.py     # Market data tool via OpenBB API ✓
-|   │       ├── print_tool.py      # Mock report generation tool
-|   │       └── analysis_tool.py   # Mock analysis tool
-|   ├── web/                       # ✓ Flask web application
-|   │   ├── app.py                 # Web app with chat interface
-|   │   └── templates/             # HTML templates
-|   ├── cli/                       # ✓ Command-line interface
-|   │   └── app.py                 # CLI client implementation
-|   ├── common/                    # ✓ Shared schemas and utilities
-|   │   └── schemas.py             # Common Pydantic models
-|   ├── data/                      # ✓ Data API service (conversation storage)
-|   │   ├── __init__.py            # Package exports
-|   │   ├── api.py                 # FastAPI conversation storage endpoints
-|   │   ├── models.py              # Beanie ODM models for MongoDB
-|   │   └── database.py            # MongoDB async client and health checks
-|   ├── openbb/                    # ✓ OpenBB API service
-|   │   ├── __init__.py            # Package exports
-|   │   ├── api.py                 # FastAPI service endpoints
-|   │   └── openbb_client.py       # OpenBB Platform integration
-|   ├── print/                     # 🚧 Placeholder for Print API
-|   └── analysis/                  # 🚧 Placeholder for Analysis API
-├── tests/                         # ✓ Test suite
-└── app/                           # ✓ Docker deployment configuration
-    ├── compose.yml                # Current: web + agent + data + openbb services
-    ├── .env                       # Environment configuration
-    ├── .env.example               # Environment template
-    └── services/                  # Service-specific Dockerfiles
-        ├── web/
-        │   └── Dockerfile         # ✓ Flask web service
-        ├── agent/
-        │   └── Dockerfile         # ✓ Agent API service
-        ├── data/                  # ✓ Data API service (conversation storage)
-        │   └── Dockerfile         # ✓ Data API service
-        ├── openbb/                # ✓ OpenBB API service
-        │   └── Dockerfile         # ✓ OpenBB API service
-        ├── print/                 # 🚧 Future Print API service
-        └── analysis/              # 🚧 Future Analysis API service
+│   └── agent.md                     # Agent implementation details
+├── investr/                         # Python package source code
+|   ├── agent/                       # ✓ Agent API and AutoGen integration
+|   │   ├── api.py                   # FastAPI wrapper
+|   │   ├── agent.py                 # Agent factory and configuration
+|   │   ├── models.py                # Pydantic data models
+|   │   └── tools/                   # AutoGen tool implementations
+|   │       ├── conversation_tool.py # Conversation storage tool ✓
+|   │       ├── openbb_tool.py       # Market data tool via OpenBB API ✓
+|   │       └── analysis_tool.py     # Mock analysis tool
+|   ├── web/                         # ✓ Flask web application
+|   │   ├── app.py                   # Web app with chat interface
+|   │   └── templates/               # HTML templates
+|   ├── cli/                         # ✓ Command-line interface
+|   │   └── app.py                   # CLI client implementation
+|   ├── common/                      # ✓ Shared schemas and utilities
+|   │   └── schemas.py               # Common Pydantic models
+|   ├── data/                        # ✓ Data API service (conversation storage)
+|   │   ├── __init__.py              # Package exports
+|   │   ├── api.py                   # FastAPI conversation storage endpoints
+|   │   ├── models.py                # Beanie ODM models for MongoDB
+|   │   └── database.py              # MongoDB async client and health checks
+|   ├── openbb/                      # ✓ OpenBB API service
+|   │   ├── __init__.py              # Package exports
+|   │   ├── api.py                   # FastAPI service endpoints
+|   │   └── openbb_client.py         # OpenBB Platform integration
+|   └── analysis/                    # 🚧 Placeholder for Analysis API
+├── tests/                           # ✓ Test suite
+└── app/                             # ✓ Docker deployment configuration
+    ├── compose.yml                  # Current: web + agent + data + openbb services
+    ├── .env                         # Environment configuration
+    ├── .env.example                 # Environment template
+    └── services/                    # Service-specific Dockerfiles
+        ├── web/                     # ✓ Flask web service
+        │   └── Dockerfile
+        ├── agent/                   # ✓ Agent API service
+        │   └── Dockerfile
+        ├── data/                    # ✓ Data API service
+        │   └── Dockerfile
+        ├── openbb/                  # ✓ OpenBB API service
+        │   └── Dockerfile
+        └── analysis/                # 🚧 Future Analysis API service
 ```
 
 **Legend:**
@@ -310,10 +293,6 @@ The `app/compose.yml` currently defines five services:
   - Focused architecture on core investment research using OpenBB market data
 
 ### Phase 5: Advanced Services (🔮 Planned)
-- [ ] **Print API Service**: Document generation service
-  - ReportLab for PDF generation
-  - Markdown to HTML conversion
-  - Template management system
 - [ ] **Analysis API Service**: Financial analysis service
   - Time-series analysis capabilities
   - Risk assessment models
