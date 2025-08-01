@@ -272,6 +272,78 @@ body {
     margin-top: 0.25rem;
 }
 
+/* Progress indicator styles for streaming */
+.progress-indicator {
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 6px;
+    background-color: #e3f2fd;
+    border-left: 3px solid #2196f3;
+    font-size: 0.9rem;
+}
+
+.progress-indicator.completed {
+    background-color: #f1f8e9;
+    border-left-color: #4caf50;
+}
+
+.progress-indicator.completed.error {
+    background-color: #ffebee;
+    border-left-color: #f44336;
+}
+
+.progress-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #e3f2fd;
+    border-top: 2px solid #2196f3;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.progress-indicator.completed .spinner {
+    display: none;
+}
+
+.status-icon {
+    font-size: 14px;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.progress-message {
+    font-weight: 500;
+    color: #1976d2;
+}
+
+.progress-indicator.completed .progress-message {
+    color: #2e7d32;
+}
+
+.progress-indicator.completed.error .progress-message {
+    color: #c62828;
+}
+
+.progress-tool {
+    font-size: 0.8rem;
+    color: #666;
+    font-style: italic;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
 .tool-execution-time {
     font-size: 0.75rem;
     color: #6c757d;

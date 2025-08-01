@@ -138,7 +138,48 @@ function setLoading(loading) {
 }
 
 /**
- * Send a message to the agent API
+ * Add a progress indicator for tool execution
+ * @param {string} message - The progress message to display
+ * @param {string} tool - The tool name being executed
+ * @returns {HTMLElement} The progress element
+ */
+function addProgressIndicator(message, tool = '') {
+    const progressDiv = document.createElement('div');
+    progressDiv.className = 'progress-indicator';
+    progressDiv.innerHTML = `
+        <div class="progress-content">
+            <div class="spinner"></div>
+            <span class="progress-message">${message}</span>
+            ${tool ? `<span class="progress-tool">(${tool})</span>` : ''}
+        </div>
+    `;
+    
+    messagesContainer.appendChild(progressDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    return progressDiv;
+}
+
+/**
+ * Update a progress indicator with completion status
+ * @param {HTMLElement} progressElement - The progress element to update
+ * @param {string} message - The completion message
+ * @param {boolean} success - Whether the operation was successful
+ */
+function updateProgressIndicator(progressElement, message, success = true) {
+    const statusClass = success ? 'success' : 'error';
+    const statusIcon = success ? '✅' : '❌';
+    
+    progressElement.className = `progress-indicator completed ${statusClass}`;
+    progressElement.innerHTML = `
+        <div class="progress-content">
+            <span class="status-icon">${statusIcon}</span>
+            <span class="progress-message">${message}</span>
+        </div>
+    `;
+}
+
+/**
+ * Send a message to the agent API using streaming
  */
 async function sendMessage() {
     const message = messageInput.value.trim();
@@ -149,47 +190,122 @@ async function sendMessage() {
     messageInput.value = '';
     setLoading(true);
 
+    let currentProgressElement = null;
+    let toolCalls = [];
+    
     try {
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'text/event-stream',
             },
             body: JSON.stringify({ message }),
         });
 
         if (!response.ok) {
-            // Handle ErrorResponse format for non-200 responses
-            try {
-                const errorData = await response.json();
-                if (errorData.error && errorData.message) {
-                    throw new Error(errorData.message);
-                }
-            } catch (parseError) {
-                // If we can't parse the error response, fall back to status
-                throw new Error(`HTTP ${response.status}`);
-            }
             throw new Error(`HTTP ${response.status}`);
         }
 
-        const data = await response.json();
+        // Check if the response is a stream (SSE) or regular JSON
+        const contentType = response.headers.get('content-type');
         
-        // Check for ErrorResponse format in successful responses
-        if (data.error && data.message) {
-            addError(data.message);
-        } else if (data.error) {
-            // Legacy error format support
-            addError(data.error);
+        if (contentType && contentType.includes('text/event-stream')) {
+            // Handle streaming response
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                
+                                switch (data.type) {
+                                    case 'start':
+                                        currentProgressElement = addProgressIndicator(data.message);
+                                        break;
+                                        
+                                    case 'tool_start':
+                                        if (currentProgressElement) {
+                                            updateProgressIndicator(currentProgressElement, 'Research started', true);
+                                        }
+                                        currentProgressElement = addProgressIndicator(data.message, data.tool);
+                                        break;
+                                        
+                                    case 'tool_complete':
+                                        if (currentProgressElement) {
+                                            updateProgressIndicator(currentProgressElement, data.message, data.success);
+                                        }
+                                        // Store tool call information
+                                        toolCalls.push({
+                                            name: data.tool,
+                                            success: data.success,
+                                            result: data.message,
+                                            execution_time_ms: 1000 // Mock value
+                                        });
+                                        currentProgressElement = null;
+                                        break;
+                                        
+                                    case 'response':
+                                        if (currentProgressElement) {
+                                            updateProgressIndicator(currentProgressElement, 'Research completed', true);
+                                        }
+                                        // Add final agent response
+                                        addMessage(
+                                            data.message,
+                                            false,
+                                            new Date().toISOString(),
+                                            toolCalls,
+                                            [] // References can be added later if needed
+                                        );
+                                        break;
+                                        
+                                    case 'error':
+                                        if (currentProgressElement) {
+                                            updateProgressIndicator(currentProgressElement, 'Error occurred', false);
+                                        }
+                                        addError(data.message);
+                                        break;
+                                }
+                            } catch (parseError) {
+                                console.warn('Failed to parse SSE data:', line);
+                            }
+                        }
+                    }
+                }
+            } finally {
+                reader.releaseLock();
+            }
         } else {
-            addMessage(
-                data.response, 
-                false, 
-                data.timestamp,
-                data.tool_calls || [],
-                data.references || []
-            );
+            // Fallback to regular JSON response
+            const data = await response.json();
+            
+            if (data.error && data.message) {
+                addError(data.message);
+            } else if (data.error) {
+                addError(data.error);
+            } else {
+                addMessage(
+                    data.response, 
+                    false, 
+                    data.timestamp,
+                    data.tool_calls || [],
+                    data.references || []
+                );
+            }
         }
     } catch (error) {
+        if (currentProgressElement) {
+            updateProgressIndicator(currentProgressElement, 'Connection failed', false);
+        }
         addError(`Failed to send message: ${error.message}`);
     } finally {
         setLoading(false);
