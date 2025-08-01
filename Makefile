@@ -2,8 +2,9 @@
 PYTHON ?= python3
 PROJECT_NAME := $(shell basename $(CURDIR))
 DOCKER_COMPOSE := docker compose
-UV := uv
-RUFF = $(UV) run ruff
+RUFF = uvx ruff
+TY = uvx ty
+STRIPOUT = uvx nbstripout
 LINT_FLAGS := --fix --show-fixes --respect-gitignore --show-files
 APP_DIR := $(CURDIR)/app
 DOCKER_COMPOSE_FILE := $(APP_DIR)/compose.yml
@@ -76,18 +77,26 @@ clean: down ## Clean up Docker containers and images
 
 
 # code quality targets ---------------------------------------------->8---------
-lint: ## Run linters
+lint: ## Run linter
 	@echo "Running linters..."
 	$(RUFF) check $(SOURCE_DIR) $(LINT_FLAGS)
 	$(RUFF) check $(TEST_DIR) $(LINT_FLAGS)
 
-format: ## Format code using black
+format: ## Run formatter
 	@echo "Formatting code with black..."
 	$(RUFF) format $(SOURCE_DIR)
 	$(RUFF) format $(TEST_DIR)
 
 check: lint format ## Run code quality checks
 	@echo "Running code quality checks..."
+
+type-check: ## Run type checker
+	@echo "Running type checker..."
+	$(TY) check $(SOURCE_DIR)
+
+stripout: ## Clear output cells from Jupyter notebooks
+	@echo "Stripping output from Jupyter notebooks..."
+	$(STRIPOUT) notebooks/*.ipynb
 
 
 # test targets ------------------------------------------------------>8---------
