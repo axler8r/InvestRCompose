@@ -101,7 +101,7 @@ class WebApp:
         try:
             # Call the agent service API
             response: requests.Response = requests.post(
-                f"{self.agent_api_url}/api/query",
+                f"{self.agent_api_url}/agent/query",
                 json=user_request.model_dump(),
                 headers={"Content-Type": "application/json"},
                 timeout=30,

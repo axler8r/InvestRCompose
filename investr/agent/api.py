@@ -1,5 +1,6 @@
 """FastAPI wrapper for the investment research agent."""
 
+import json
 import os
 import time
 import traceback
@@ -15,15 +16,9 @@ from fastapi.responses import StreamingResponse
 
 from investr.agent.agent import InvestmentAgent
 from investr.agent.models import (
-    AgentRequest,
     ConversationArgs,
-    TaskContext,
-    TaskPriority,
-    TaskType,
-    TokenUsage,
     ToolResult,
 )
-from investr.agent.models import AgentResponse as InternalAgentResponse
 from investr.agent.tools.conversation_tool import ConversationTool
 from investr.common.exceptions import (
     generic_exception_handler,
@@ -69,79 +64,6 @@ class AgentAPI:
         # Create ConversationTool for conversation storage
         self.conversation_tool = ConversationTool(data_api_base_url=data_api_url)
 
-    def _convert_user_request_to_agent_request(
-        self, user_request: UserRequest
-    ) -> AgentRequest:
-        """Convert UserRequest to internal AgentRequest.
-
-        Args:
-            user_request: Request from web UI
-
-        Returns:
-            Internal agent request
-
-        """
-        context = TaskContext(
-            session_id=user_request.session_id,
-            user_id=None,
-            preferences={},
-            previous_context=user_request.context,
-        )
-
-        return AgentRequest(
-            task=user_request.message,
-            task_type=TaskType.DATA_QUERY,
-            priority=TaskPriority.MEDIUM,
-            context=context,
-            max_iterations=5,
-            stream_response=False,
-        )
-
-    def _convert_internal_response_to_agent_response(
-        self, internal_response: InternalAgentResponse, session_id: str
-    ) -> AgentResponse:
-        """Convert internal AgentResponse to common schema AgentResponse.
-
-        Args:
-            internal_response: Internal agent response
-            session_id: Session identifier
-
-        Returns:
-            Common schema agent response
-
-        """
-        # Convert tool results to tool_calls format
-        tool_calls = []
-        for tool in internal_response.tools_used:
-            tool_calls.append(
-                {
-                    "name": tool.tool_name,
-                    "success": tool.success,
-                    "result": str(tool.result),
-                    "execution_time_ms": tool.execution_time_ms,
-                }
-            )
-
-        return AgentResponse(
-            session_id=session_id,
-            message=internal_response.response,
-            status=RequestStatus.COMPLETED
-            if internal_response.task_completed
-            else RequestStatus.FAILED,
-            tool_calls=tool_calls,
-            references=[
-                "https://sec.gov/edgar/searchedgar/companysearch.html",
-                "https://finance.yahoo.com",
-                "https://www.investopedia.com/terms/",
-            ]
-            if tool_calls
-            else [],  # Add mock references when tools are used
-            metadata={
-                "execution_time_ms": internal_response.total_execution_time_ms,
-                "token_usage": internal_response.token_usage,
-            },
-        )
-
     async def process_user_request(self, user_request: UserRequest) -> AgentResponse:
         """Process a user request and return a response in common schema format.
 
@@ -155,6 +77,8 @@ class AgentAPI:
             HTTPException: If request processing fails
 
         """
+        start_time: float = time.time()
+
         # Store user message in conversation
         if self.conversation_tool:
             conversation_args = ConversationArgs(
@@ -168,67 +92,10 @@ class AgentAPI:
             )
             await self.conversation_tool.run(conversation_args, CancellationToken())
 
-        # Convert to internal format
-        agent_request: AgentRequest = self._convert_user_request_to_agent_request(
-            user_request
-        )
-
-        # Process with existing method
-        internal_response: InternalAgentResponse = await self.process_request(
-            agent_request
-        )
-
-        # Store assistant response in conversation
-        if self.conversation_tool:
-            # Extract tool calls from internal response
-            tool_calls = []
-            if internal_response.tools_used:
-                tool_calls = [
-                    {
-                        "tool": tool.tool_name,
-                        "success": tool.success,
-                        "result": tool.result,
-                        "execution_time_ms": tool.execution_time_ms,
-                    }
-                    for tool in internal_response.tools_used
-                ]
-
-            conversation_args = ConversationArgs(
-                session_id=user_request.session_id,
-                message={
-                    "role": "assistant",
-                    "content": internal_response.response,
-                    "tool_calls": tool_calls if tool_calls else None,
-                    "timestamp": datetime.utcnow().isoformat(),
-                },
-                message_type="assistant",
-            )
-            await self.conversation_tool.run(conversation_args, CancellationToken())
-
-        # Convert back to common schema
-        return self._convert_internal_response_to_agent_response(
-            internal_response, user_request.session_id
-        )
-
-    async def process_request(self, request: AgentRequest) -> InternalAgentResponse:
-        """Process an agent request and return a response.
-
-        Args:
-            request: The agent request to process
-
-        Returns:
-            Agent response with results
-
-        Raises:
-            HTTPException: If request processing fails
-
-        """
-        start_time: float = time.time()
-
         try:
-            # Run the agent task
+            # Run the agent task directly with user message
             task_result = await self.agent.run(
-                task=request.task,
+                task=user_request.message,
                 cancellation_token=None,  # TODO: Add proper cancellation support
             )
 
@@ -258,7 +125,7 @@ class AgentAPI:
 
             # Create mock tools used for now (TODO: extract from actual execution)
             # Add mock tools for common investment research queries
-            task_lower: str = request.task.lower()
+            task_lower: str = user_request.message.lower()
             if any(
                 keyword in task_lower
                 for keyword in [
@@ -298,46 +165,125 @@ class AgentAPI:
 
             total_time = (time.time() - start_time) * 1000
 
-            return InternalAgentResponse(
-                response=response_content.strip() or "Task completed successfully",
-                task_completed=True,
-                tools_used=tools_used,
-                session_id=request.context.session_id,
-                total_execution_time_ms=total_time,
-                token_usage=TokenUsage(
-                    prompt_tokens=100,
-                    completion_tokens=50,
-                    total_tokens=150,
-                ),
+            # Convert tool results to tool_calls format
+            tool_calls = []
+            for tool in tools_used:
+                tool_calls.append(
+                    {
+                        "name": tool.tool_name,
+                        "success": tool.success,
+                        "result": str(tool.result),
+                        "execution_time_ms": tool.execution_time_ms,
+                    }
+                )
+
+            # Create response directly
+            response = AgentResponse(
+                session_id=user_request.session_id,
+                message=response_content.strip() or "Task completed successfully",
+                status=RequestStatus.COMPLETED,
+                tool_calls=tool_calls,
+                references=[
+                    "https://sec.gov/edgar/searchedgar/companysearch.html",
+                    "https://finance.yahoo.com",
+                    "https://www.investopedia.com/terms/",
+                ]
+                if tool_calls
+                else [],  # Add mock references when tools are used
+                metadata={
+                    "execution_time_ms": total_time,
+                    "token_usage": {
+                        "prompt_tokens": 100,
+                        "completion_tokens": 50,
+                        "total_tokens": 150,
+                    },
+                },
             )
+
+            # Store assistant response in conversation
+            if self.conversation_tool:
+                # Extract tool calls from response
+                tool_calls_for_storage = []
+                if tool_calls:
+                    tool_calls_for_storage = [
+                        {
+                            "tool": tool_call["name"],
+                            "success": tool_call["success"],
+                            "result": tool_call["result"],
+                            "execution_time_ms": tool_call["execution_time_ms"],
+                        }
+                        for tool_call in tool_calls
+                    ]
+
+                conversation_args = ConversationArgs(
+                    session_id=user_request.session_id,
+                    message={
+                        "role": "assistant",
+                        "content": response.message,
+                        "tool_calls": tool_calls_for_storage
+                        if tool_calls_for_storage
+                        else None,
+                        "timestamp": datetime.utcnow().isoformat(),
+                    },
+                    message_type="assistant",
+                )
+                await self.conversation_tool.run(conversation_args, CancellationToken())
+
+            return response
 
         except Exception as e:
             raise HTTPException(
                 status_code=500, detail=f"Agent processing failed: {str(e)}"
             ) from e
 
-    async def stream_response(self, request: AgentRequest) -> AsyncIterator[str]:
-        """Stream agent response as it's generated.
+    async def stream_user_request(
+        self, user_request: UserRequest
+    ) -> AsyncIterator[str]:
+        """Stream agent response with progress events for web UI.
 
         Args:
-            request: The agent request to process
+            user_request: The user request from web UI
 
         Yields:
-            Streaming response chunks
+            SSE-formatted events with progress updates
 
         """
         try:
-            # Use agent's streaming capability
-            async for message in self.agent.run_stream(
-                task=request.task, cancellation_token=None
-            ):
-                # Handle different message types by converting to string
-                message_str = str(message)
-                if message_str and message_str.strip():
-                    yield f"data: {message_str}\n\n"
+            # Send start event
+            yield f"data: {json.dumps({'type': 'start', 'message': 'Starting analysis...'})}\n\n"
+
+            # Process request (reuse existing logic)
+            response = await self.process_user_request(user_request)
+
+            # Stream progress events based on tools that were used
+            if response.tool_calls:
+                for tool_call in response.tool_calls:
+                    # Create user-friendly tool messages
+                    tool_messages = {
+                        "search_data": "Searching financial databases...",
+                        "get_market_data": "Getting latest stock market data...",
+                        "analyze_data": "Analyzing financial trends...",
+                    }
+
+                    tool_message = tool_messages.get(
+                        tool_call["name"], f"Using {tool_call['name']} tool..."
+                    )
+
+                    progress_event = {
+                        "type": "tool_progress",
+                        "message": tool_message,
+                        "tool_name": tool_call["name"],
+                        "success": tool_call["success"],
+                    }
+                    yield f"data: {json.dumps(progress_event)}\n\n"
+
+            # Send final response
+            final_event = {"type": "complete", "response": response.model_dump()}
+            yield f"data: {json.dumps(final_event)}\n\n"
 
         except Exception as e:
-            yield f"data: Error: {str(e)}\n\n"
+            error_event = {"type": "error", "message": str(e)}
+            yield f"data: {json.dumps(error_event)}\n\n"
 
 
 def create_app(
@@ -379,21 +325,22 @@ def create_app(
         analysis_api_url=analysis_api_url,
     )
 
-    @app.post("/api/query")
+    @app.post("/agent/query")
     async def query_agent(request: UserRequest) -> AgentResponse:
         """Process an investment research query from web UI."""
         return await agent_api.process_user_request(request)
 
-    @app.post("/agent/query")
-    async def query_agent_internal(request: AgentRequest) -> InternalAgentResponse:
-        """Process an investment research query (internal format)."""
-        return await agent_api.process_request(request)
-
     @app.post("/agent/stream")
-    async def stream_agent(request: AgentRequest) -> StreamingResponse:
-        """Stream investment research response."""
+    async def stream_agent_user(request: UserRequest) -> StreamingResponse:
+        """Stream agent response with progress events for web UI."""
         return StreamingResponse(
-            agent_api.stream_response(request), media_type="text/plain"
+            agent_api.stream_user_request(request),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+            },
         )
 
     @app.get("/health")
