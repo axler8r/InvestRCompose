@@ -248,41 +248,151 @@ class AgentAPI:
             SSE-formatted events with progress updates
 
         """
+        # Store user message in conversation first
+        if self.conversation_tool:
+            conversation_args = ConversationArgs(
+                session_id=user_request.session_id,
+                message={
+                    "role": "user",
+                    "content": user_request.message,
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
+                message_type="user",
+            )
+            await self.conversation_tool.run(conversation_args, CancellationToken())
+
         try:
             # Send start event
-            yield f"data: {json.dumps({'type': 'start', 'message': 'Starting analysis...'})}\n\n"
+            yield f"data: {json.dumps({'type': 'start', 'message': 'Starting your investment research...'})}\n\n"
 
-            # Process request (reuse existing logic)
-            response = await self.process_user_request(user_request)
+            # Tool name to user-friendly message mapping
+            tool_messages = {
+                "get_market_data": "Getting latest stock market data...",
+                "analyze_data": "Analyzing financial trends...",
+                "store_conversation": "Saving conversation...",
+                "search_data": "Searching financial databases...",
+            }
 
-            # Stream progress events based on tools that were used
-            if response.tool_calls:
-                for tool_call in response.tool_calls:
-                    # Create user-friendly tool messages
-                    tool_messages = {
-                        "search_data": "Searching financial databases...",
-                        "get_market_data": "Getting latest stock market data...",
-                        "analyze_data": "Analyzing financial trends...",
-                    }
+            final_response_content = ""
+            tool_calls_for_storage = []
 
-                    tool_message = tool_messages.get(
-                        tool_call["name"], f"Using {tool_call['name']} tool..."
-                    )
+            # Stream from AutoGen agent
+            async for message in self.agent.run_stream(
+                task=user_request.message,
+                cancellation_token=None,
+            ):
+                message_type = getattr(message, "type", None)
 
-                    progress_event = {
-                        "type": "tool_progress",
-                        "message": tool_message,
-                        "tool_name": tool_call["name"],
-                        "success": tool_call["success"],
-                    }
-                    yield f"data: {json.dumps(progress_event)}\n\n"
+                # Handle ToolCallRequestEvent - when agent starts calling a tool
+                if message_type == "ToolCallRequestEvent":
+                    content = getattr(message, "content", None)
+                    if content and len(content) > 0:
+                        # Extract tool name from first function call
+                        first_call = content[0]
+                        tool_name = getattr(first_call, "name", "unknown_tool")
+                        friendly_message = tool_messages.get(
+                            tool_name, f"Using {tool_name} tool..."
+                        )
+
+                        tool_start_event = {
+                            "type": "tool_start",
+                            "message": friendly_message,
+                            "tool": tool_name,
+                        }
+                        yield f"data: {json.dumps(tool_start_event)}\n\n"
+
+                # Handle ToolCallExecutionEvent - when tool execution completes
+                elif message_type == "ToolCallExecutionEvent":
+                    content = getattr(message, "content", None)
+                    if content and len(content) > 0:
+                        # Extract tool result from first execution result
+                        execution_result = content[0]
+                        tool_name = getattr(execution_result, "name", "unknown_tool")
+                        tool_result = getattr(execution_result, "content", "")
+                        is_error = getattr(execution_result, "is_error", False)
+
+                        success = not is_error
+
+                        # Create user-friendly completion message
+                        if success:
+                            completion_messages = {
+                                "get_market_data": "Retrieved market data successfully",
+                                "analyze_data": "Analysis completed successfully",
+                                "store_conversation": "Conversation saved",
+                                "search_data": "Financial data retrieved",
+                            }
+                            friendly_message = completion_messages.get(
+                                tool_name, f"{tool_name} completed successfully"
+                            )
+                        else:
+                            friendly_message = f"Failed to complete {tool_name}"
+
+                        tool_complete_event = {
+                            "type": "tool_complete",
+                            "message": friendly_message,
+                            "tool": tool_name,
+                            "success": success,
+                        }
+                        yield f"data: {json.dumps(tool_complete_event)}\n\n"
+
+                        # Store tool call for conversation
+                        tool_calls_for_storage.append(
+                            {
+                                "tool": tool_name,
+                                "success": success,
+                                "result": str(tool_result)[
+                                    :500
+                                ],  # Truncate for storage
+                                "execution_time_ms": 1000,  # Mock value
+                            }
+                        )
+
+                # Handle ToolCallSummaryMessage - agent's final response after tool use
+                elif message_type == "ToolCallSummaryMessage":
+                    content = getattr(message, "content", "")
+                    if isinstance(content, str) and len(content) > 10:
+                        final_response_content = content
+
+                # Handle TextMessage - agent's direct response (when no tools used)
+                elif message_type == "TextMessage":
+                    source = getattr(message, "source", "")
+                    content = getattr(message, "content", "")
+                    if (
+                        source == "investment_researcher"
+                        and isinstance(content, str)
+                        and len(content) > 10
+                    ):
+                        final_response_content = content
 
             # Send final response
-            final_event = {"type": "complete", "response": response.model_dump()}
-            yield f"data: {json.dumps(final_event)}\n\n"
+            if not final_response_content:
+                final_response_content = "Investment research completed successfully"
+
+            response_event = {
+                "type": "response",
+                "message": final_response_content,
+                "final": True,
+            }
+            yield f"data: {json.dumps(response_event)}\n\n"
+
+            # Store assistant response in conversation
+            if self.conversation_tool:
+                conversation_args = ConversationArgs(
+                    session_id=user_request.session_id,
+                    message={
+                        "role": "assistant",
+                        "content": final_response_content,
+                        "tool_calls": tool_calls_for_storage
+                        if tool_calls_for_storage
+                        else None,
+                        "timestamp": datetime.utcnow().isoformat(),
+                    },
+                    message_type="assistant",
+                )
+                await self.conversation_tool.run(conversation_args, CancellationToken())
 
         except Exception as e:
-            error_event = {"type": "error", "message": str(e)}
+            error_event = {"type": "error", "message": f"An error occurred: {str(e)}"}
             yield f"data: {json.dumps(error_event)}\n\n"
 
 

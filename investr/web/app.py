@@ -1,5 +1,6 @@
 """Flask web application for the Investment Research Agent."""
 
+import json
 import os
 import uuid
 from datetime import datetime
@@ -56,20 +57,33 @@ class WebApp:
                     context={"timestamp": datetime.now().isoformat()},
                 )
 
-                # Send request to agent API
-                response: AgentResponse = self._call_agent_api(user_request)
-
-                return jsonify(
-                    {
-                        "response": response.message,
-                        "status": response.status.value,
-                        "timestamp": response.timestamp.isoformat(),
-                        "session_id": response.session_id,
-                        "tool_calls": response.tool_calls or [],
-                        "references": response.references or [],
-                        "metadata": response.metadata or {},
-                    }
-                )
+                # Check if client accepts streaming
+                accept_header = request.headers.get("Accept", "")
+                if "text/event-stream" in accept_header:
+                    # Return streaming response
+                    return Response(
+                        self._stream_agent_response(user_request),
+                        content_type="text/event-stream",
+                        headers={
+                            "Cache-Control": "no-cache",
+                            "Connection": "keep-alive",
+                            "Access-Control-Allow-Origin": "*",
+                        },
+                    )
+                else:
+                    # Return regular JSON response
+                    response: AgentResponse = self._call_agent_api(user_request)
+                    return jsonify(
+                        {
+                            "response": response.message,
+                            "status": response.status.value,
+                            "timestamp": response.timestamp.isoformat(),
+                            "session_id": response.session_id,
+                            "tool_calls": response.tool_calls or [],
+                            "references": response.references or [],
+                            "metadata": response.metadata or {},
+                        }
+                    )
 
             except Exception as e:
                 return jsonify({"error": f"Failed to process request: {str(e)}"}), 500
@@ -84,6 +98,56 @@ class WebApp:
                     "timestamp": datetime.now().isoformat(),
                 }
             )
+
+    def _stream_agent_response(self, user_request: UserRequest):
+        """Stream agent response from the streaming endpoint.
+
+        Args:
+            user_request: The user request to send
+
+        Yields:
+            Server-sent events
+
+        """
+        try:
+            # Call the agent streaming API
+            response = requests.post(
+                f"{self.agent_api_url}/agent/stream",
+                json=user_request.model_dump(),
+                headers={"Content-Type": "application/json"},
+                stream=True,
+                timeout=60,
+            )
+
+            if response.status_code == 200:
+                # Forward the streaming response
+                for line in response.iter_lines():
+                    if line:
+                        yield line.decode("utf-8") + "\n"
+            else:
+                # Handle API error
+                error_detail = "Unknown error"
+                try:
+                    error_data = response.json()
+                    error_detail = error_data.get("detail", "Unknown error")
+                except:
+                    error_detail = f"HTTP {response.status_code}"
+
+                # Send error event
+                error_event = {
+                    "type": "error",
+                    "message": f"Agent API error: {error_detail}",
+                }
+                yield f"data: {json.dumps(error_event)}\n\n"
+
+        except requests.exceptions.RequestException as e:
+            # Handle connection errors
+            error_event = {"type": "error", "message": f"Connection error: {str(e)}"}
+            yield f"data: {json.dumps(error_event)}\n\n"
+        except Exception as e:
+            # Handle other errors
+            error_event = {"type": "error", "message": f"Unexpected error: {str(e)}"}
+            yield f"data: {json.dumps(error_event)}\n\n"
 
     def _call_agent_api(self, user_request: UserRequest) -> AgentResponse:
         """Call the agent API with a user request.
