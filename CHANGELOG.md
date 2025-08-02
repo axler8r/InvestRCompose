@@ -1,6 +1,6 @@
 authors: axl,
-date: 2025-07-31
-version: 0.7.1
+date: 2025-08-02
+version: 0.8.0
 ---
 # Changelog
 
@@ -8,6 +8,103 @@ All notable changes to the InvestR project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+
+## 0.8.0
+**2025-08-02**
+
+### Added
+- **Real-time Streaming Interface**
+  - Implemented AutoGen streaming integration with tool execution events
+  - Added server-sent events (SSE) endpoint for real-time progress updates
+  - Created Flask streaming response support with content-type detection
+  - Added progress indicators with spinners and completion status in Web UI
+  - Implemented CSS animations and styling for streaming progress visualization
+  - Added seamless fallback between streaming and regular JSON responses
+
+- **Enhanced User Experience**
+  - Implemented asynchronous user experience with live feedback during tool execution
+  - Added real-time progress tracking for investment research queries
+  - Created user-friendly mapping of AutoGen ToolCallRequestEvent and ToolCallExecutionEvent
+  - Enhanced visual feedback with loading states and completion indicators
+
+- **Build System Enhancements**
+  - Added Docker housekeeping targets to Makefile
+  - Implemented docker-rmdi, docker-rmdv, compose-rmi, and docker-clean targets
+  - Enhanced build system with improved container management
+  - Added comprehensive Docker cleanup utilities
+
+### Changed
+- **Architecture Simplification**
+  - Adopted streaming-only architecture by retiring /agent/query endpoint
+  - Removed parallel code paths to improve maintainability
+  - Eliminated UserRequest to AgentRequest conversion layer
+  - Simplified agent models by removing unnecessary complexity
+
+- **API Restructuring**
+  - Removed process_user_request method (~170 lines) from AgentAPI
+  - Eliminated /agent/query endpoint from FastAPI application
+  - Refactored AgentAPI to work directly with UserRequest objects
+  - Updated stream_user_request() to provide structured SSE events
+
+- **Web UI Modernisation**
+  - Separated CSS and JavaScript from HTML template into external files
+  - Created static/css/style.css and static/js/app.js
+  - Simplified Web UI to streaming-only responses
+  - Enhanced maintainability with proper asset separation
+
+- **Code Quality Improvements**
+  - Consolidated agent processing logic for better maintainability
+  - Removed unused imports (time, ToolResult, AgentResponse, RequestStatus)
+  - Simplified agent/__init__.py exports to only include InvestmentAgent
+  - Updated endpoint references from /api/query to /agent/query
+
+### Removed
+- **Legacy API Components**
+  - Removed AgentRequest, TaskType, TaskPriority, and TaskContext classes
+  - Eliminated TokenUsage and internal AgentResponse from agent models
+  - Removed _convert_user_request_to_agent_request() conversion method
+  - Removed _convert_internal_response_to_agent_response() conversion method
+  - Deleted process_request() method, consolidated logic into process_user_request()
+  - Removed _call_agent_api fallback method from Flask application
+
+- **Redundant Code Paths**
+  - Eliminated parallel synchronous and asynchronous processing paths
+  - Removed non-streaming API endpoints to focus on superior streaming interface
+  - Cleaned up unused model classes and conversion utilities
+
+### Technical Details
+
+#### Streaming Architecture
+- **AutoGen Integration**: Deep integration with Microsoft AutoGen streaming capabilities
+- **Server-Sent Events**: Real-time progress updates with structured event streaming
+- **Tool Execution Mapping**: User-friendly progress messages for tool calls
+- **Progressive Enhancement**: Graceful fallback for non-streaming environments
+
+#### API Simplification
+- **Direct Processing**: Eliminated intermediate conversion layers for better performance
+- **Reduced Complexity**: Removed ~250 lines of conversion and parallel processing code
+- **Focused Interface**: Single streaming endpoint replaces multiple API patterns
+- **Type Safety**: Maintained comprehensive Pydantic validation throughout
+
+#### Web UI Enhancement
+- **Asset Separation**: External CSS and JavaScript files for better maintainability
+- **Responsive Design**: Enhanced mobile-friendly interface with real-time feedback
+- **Progressive Loading**: Visual indicators for ongoing operations and completions
+- **Modern Architecture**: Clean separation of concerns between HTML, CSS, and JavaScript
+
+#### Development Experience
+- **Docker Management**: Comprehensive container cleanup and management tools
+- **Build Optimisation**: Enhanced Makefile with docker housekeeping capabilities
+- **Code Organisation**: Simplified imports and reduced architectural complexity
+- **Maintainability**: Streamlined codebase with single responsibility patterns
+
+### Benefits
+- **Superior User Experience**: Real-time feedback replaces blocking request/response patterns
+- **Reduced Complexity**: Eliminated unnecessary conversion layers and parallel code paths
+- **Better Maintainability**: Cleaner architecture with focused streaming interface
+- **Enhanced Performance**: Direct processing without intermediate conversions
+- **Improved Development**: Better asset organisation and Docker management tools
 
 
 ## 0.7.1

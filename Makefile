@@ -2,8 +2,9 @@
 PYTHON ?= python3
 PROJECT_NAME := $(shell basename $(CURDIR))
 DOCKER_COMPOSE := docker compose
-UV := uv
-RUFF = $(UV) run ruff
+RUFF = uvx ruff
+TY = uvx ty
+STRIPOUT = uvx nbstripout
 LINT_FLAGS := --fix --show-fixes --respect-gitignore --show-files
 APP_DIR := $(CURDIR)/app
 DOCKER_COMPOSE_FILE := $(APP_DIR)/compose.yml
@@ -16,6 +17,7 @@ TEST_DIR := tests
 		install \
 		requirements build up down start stop restart status logs clean \
 		lint format check test \
+		docker-rmdi docker-rmdv compose-rmi docker-clean \
 		browse cli mongosh
 
 
@@ -76,18 +78,43 @@ clean: down ## Clean up Docker containers and images
 
 
 # code quality targets ---------------------------------------------->8---------
-lint: ## Run linters
+lint: ## Run linter
 	@echo "Running linters..."
 	$(RUFF) check $(SOURCE_DIR) $(LINT_FLAGS)
 	$(RUFF) check $(TEST_DIR) $(LINT_FLAGS)
 
-format: ## Format code using black
+format: ## Run formatter
 	@echo "Formatting code with black..."
 	$(RUFF) format $(SOURCE_DIR)
 	$(RUFF) format $(TEST_DIR)
 
 check: lint format ## Run code quality checks
 	@echo "Running code quality checks..."
+
+type-check: ## Run type checker
+	@echo "Running type checker..."
+	$(TY) check $(SOURCE_DIR)
+
+stripout: ## Clear output cells from Jupyter notebooks
+	@echo "Stripping output from Jupyter notebooks..."
+	$(STRIPOUT) notebooks/*.ipynb
+
+
+# docker housekeeping targets --------------------------------------->8---------
+docker-rmdi: ## Remove dangling Docker images
+	@echo "Removing dangling Docker images..."
+	docker image list --filter="dangling=true" --format="{{.ID}}" | xargs -L1 docker rmi
+
+docker-rmdv: ## Remove dangling Docker volumes
+	@echo "Removing unused Docker volumes..."
+	docker volume list --filter="dangling=true" --format="{{.Name}}" | xargs -L1 docker volume rm
+
+compose-rmi: ## Remove images managed by this application
+	@echo "Removing images managed by this application..."
+	docker compose --file $(DOCKER_COMPOSE_FILE) down --rmi local
+
+docker-clean: docker-rmdi docker-rmdv compose-rmi ## Clean up Docker resources
+	@echo "Cleaning up Docker resources..."
 
 
 # test targets ------------------------------------------------------>8---------
@@ -108,3 +135,4 @@ cli: ## Run the interactive CLI application
 mongosh: ## Connect to MongoDB shell
 	@echo "Connecting to MongoDB shell..."
 	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) exec mongodb mongosh investr
+
