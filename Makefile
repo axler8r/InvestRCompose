@@ -17,6 +17,7 @@ TEST_DIR := tests
 		install \
 		requirements build up down start stop restart status logs clean \
 		lint format check test \
+		docker-rmdi docker-rmdv compose-rmi docker-clean \
 		browse cli mongosh
 
 
@@ -99,6 +100,23 @@ stripout: ## Clear output cells from Jupyter notebooks
 	$(STRIPOUT) notebooks/*.ipynb
 
 
+# docker housekeeping targets --------------------------------------->8---------
+docker-rmdi: ## Remove dangling Docker images
+	@echo "Removing dangling Docker images..."
+	docker image list --filter="dangling=true" --format="{{.ID}}" | xargs -L1 docker rmi
+
+docker-rmdv: ## Remove dangling Docker volumes
+	@echo "Removing unused Docker volumes..."
+	docker volume list --filter="dangling=true" --format="{{.Name}}" | xargs -L1 docker volume rm
+
+compose-rmi: ## Remove images managed by this application
+	@echo "Removing images managed by this application..."
+	docker compose --file $(DOCKER_COMPOSE_FILE) down --rmi local
+
+docker-clean: docker-rmdi docker-rmdv compose-rmi ## Clean up Docker resources
+	@echo "Cleaning up Docker resources..."
+
+
 # test targets ------------------------------------------------------>8---------
 test: ## Run tests using pytest
 	@echo "Running tests..."
@@ -117,3 +135,4 @@ cli: ## Run the interactive CLI application
 mongosh: ## Connect to MongoDB shell
 	@echo "Connecting to MongoDB shell..."
 	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) exec mongodb mongosh investr
+
