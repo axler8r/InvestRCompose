@@ -29,8 +29,6 @@ select = [ "D", "F", "FAST", "I", "N", ]
 
 [dependency-groups]
 dev = [
-    "jupyter>=1.1.1",
-    "nbstripout>=0.8.1",
     "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
     "ruff>=0.12.4",
