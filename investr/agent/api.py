@@ -2,7 +2,6 @@
 
 import json
 import os
-import time
 import traceback
 from datetime import datetime
 from typing import AsyncIterator, Dict
@@ -17,14 +16,13 @@ from fastapi.responses import StreamingResponse
 from investr.agent.agent import InvestmentAgent
 from investr.agent.models import (
     ConversationArgs,
-    ToolResult,
 )
 from investr.agent.tools.conversation_tool import ConversationTool
 from investr.common.exceptions import (
     generic_exception_handler,
     http_exception_handler,
 )
-from investr.common.schemas import AgentResponse, RequestStatus, UserRequest
+from investr.common.schemas import UserRequest
 
 
 class AgentAPI:
@@ -63,178 +61,6 @@ class AgentAPI:
 
         # Create ConversationTool for conversation storage
         self.conversation_tool = ConversationTool(data_api_base_url=data_api_url)
-
-    async def process_user_request(self, user_request: UserRequest) -> AgentResponse:
-        """Process a user request and return a response in common schema format.
-
-        Args:
-            user_request: The user request from web UI
-
-        Returns:
-            Agent response in common schema format
-
-        Raises:
-            HTTPException: If request processing fails
-
-        """
-        start_time: float = time.time()
-
-        # Store user message in conversation
-        if self.conversation_tool:
-            conversation_args = ConversationArgs(
-                session_id=user_request.session_id,
-                message={
-                    "role": "user",
-                    "content": user_request.message,
-                    "timestamp": datetime.utcnow().isoformat(),
-                },
-                message_type="user",
-            )
-            await self.conversation_tool.run(conversation_args, CancellationToken())
-
-        try:
-            # Run the agent task directly with user message
-            task_result = await self.agent.run(
-                task=user_request.message,
-                cancellation_token=None,  # TODO: Add proper cancellation support
-            )
-
-            # Extract response content from task result
-            response_content = ""
-            tools_used = []
-
-            # Process task result - extract only the final agent response
-            if hasattr(task_result, "messages") and task_result.messages:
-                # Look for the last TextMessage from the investment_researcher
-                for message in reversed(task_result.messages):
-                    if (
-                        hasattr(message, "source")
-                        and message.source == "investment_researcher"
-                        and hasattr(message, "type")
-                        and message.type == "TextMessage"  # type: ignore
-                        and hasattr(message, "content")
-                    ):
-                        content = getattr(message, "content", "")
-                        if isinstance(content, str) and len(content) > 50:
-                            response_content = content
-                            break
-
-                # Fallback: if no final response found, use a generic message
-                if not response_content:
-                    response_content = "Analysis completed successfully"
-
-            # Create mock tools used for now (TODO: extract from actual execution)
-            # Add mock tools for common investment research queries
-            task_lower: str = user_request.message.lower()
-            if any(
-                keyword in task_lower
-                for keyword in [
-                    "stock",
-                    "data",
-                    "company",
-                    "analysis",
-                    "market",
-                    "investment",
-                    "financial",
-                ]
-            ):
-                tools_used.append(
-                    ToolResult(
-                        tool_name="search_data",
-                        success=True,
-                        result="Retrieved financial data and company information",
-                        execution_time_ms=850,
-                        error_message=None,
-                    )
-                )
-
-                # Add market data tool for stock-related queries
-                if any(
-                    keyword in task_lower
-                    for keyword in ["stock", "market", "price", "trading"]
-                ):
-                    tools_used.append(
-                        ToolResult(
-                            tool_name="get_market_data",
-                            success=True,
-                            result="Fetched current market data and historical prices",
-                            execution_time_ms=1200,
-                            error_message=None,
-                        )
-                    )
-
-            total_time = (time.time() - start_time) * 1000
-
-            # Convert tool results to tool_calls format
-            tool_calls = []
-            for tool in tools_used:
-                tool_calls.append(
-                    {
-                        "name": tool.tool_name,
-                        "success": tool.success,
-                        "result": str(tool.result),
-                        "execution_time_ms": tool.execution_time_ms,
-                    }
-                )
-
-            # Create response directly
-            response = AgentResponse(
-                session_id=user_request.session_id,
-                message=response_content.strip() or "Task completed successfully",
-                status=RequestStatus.COMPLETED,
-                tool_calls=tool_calls,
-                references=[
-                    "https://sec.gov/edgar/searchedgar/companysearch.html",
-                    "https://finance.yahoo.com",
-                    "https://www.investopedia.com/terms/",
-                ]
-                if tool_calls
-                else [],  # Add mock references when tools are used
-                metadata={
-                    "execution_time_ms": total_time,
-                    "token_usage": {
-                        "prompt_tokens": 100,
-                        "completion_tokens": 50,
-                        "total_tokens": 150,
-                    },
-                },
-            )
-
-            # Store assistant response in conversation
-            if self.conversation_tool:
-                # Extract tool calls from response
-                tool_calls_for_storage = []
-                if tool_calls:
-                    tool_calls_for_storage = [
-                        {
-                            "tool": tool_call["name"],
-                            "success": tool_call["success"],
-                            "result": tool_call["result"],
-                            "execution_time_ms": tool_call["execution_time_ms"],
-                        }
-                        for tool_call in tool_calls
-                    ]
-
-                conversation_args = ConversationArgs(
-                    session_id=user_request.session_id,
-                    message={
-                        "role": "assistant",
-                        "content": response.message,
-                        "tool_calls": tool_calls_for_storage
-                        if tool_calls_for_storage
-                        else None,
-                        "timestamp": datetime.utcnow().isoformat(),
-                    },
-                    message_type="assistant",
-                )
-                await self.conversation_tool.run(conversation_args, CancellationToken())
-
-            return response
-
-        except Exception as e:
-            raise HTTPException(
-                status_code=500, detail=f"Agent processing failed: {str(e)}"
-            ) from e
 
     async def stream_user_request(
         self, user_request: UserRequest
@@ -434,11 +260,6 @@ def create_app(
         openbb_api_url=openbb_api_url,
         analysis_api_url=analysis_api_url,
     )
-
-    @app.post("/agent/query")
-    async def query_agent(request: UserRequest) -> AgentResponse:
-        """Process an investment research query from web UI."""
-        return await agent_api.process_user_request(request)
 
     @app.post("/agent/stream")
     async def stream_agent_user(request: UserRequest) -> StreamingResponse:

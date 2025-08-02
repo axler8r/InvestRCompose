@@ -37,7 +37,7 @@ class CLIApp:
 
         try:
             response: requests.Response = requests.post(
-                f"{self.agent_api_url}/api/query",
+                f"{self.agent_api_url}/agent/query",
                 json=user_request.model_dump(),
                 timeout=30,
             )
