@@ -1,5 +1,6 @@
 """Flask web application for the Investment Research Agent."""
 
+import json
 import os
 import uuid
 from datetime import datetime
@@ -7,7 +8,7 @@ from datetime import datetime
 import requests
 from flask import Flask, Response, jsonify, render_template, request, session
 
-from investr.common.schemas import AgentResponse, RequestStatus, UserRequest
+from investr.common.schemas import UserRequest
 
 
 class WebApp:
@@ -56,19 +57,15 @@ class WebApp:
                     context={"timestamp": datetime.now().isoformat()},
                 )
 
-                # Send request to agent API
-                response: AgentResponse = self._call_agent_api(user_request)
-
-                return jsonify(
-                    {
-                        "response": response.message,
-                        "status": response.status.value,
-                        "timestamp": response.timestamp.isoformat(),
-                        "session_id": response.session_id,
-                        "tool_calls": response.tool_calls or [],
-                        "references": response.references or [],
-                        "metadata": response.metadata or {},
-                    }
+                # Always return streaming response - provides better user experience
+                return Response(
+                    self._stream_agent_response(user_request),
+                    content_type="text/event-stream",
+                    headers={
+                        "Cache-Control": "no-cache",
+                        "Connection": "keep-alive",
+                        "Access-Control-Allow-Origin": "*",
+                    },
                 )
 
             except Exception as e:
@@ -85,60 +82,55 @@ class WebApp:
                 }
             )
 
-    def _call_agent_api(self, user_request: UserRequest) -> AgentResponse:
-        """Call the agent API with a user request.
+    def _stream_agent_response(self, user_request: UserRequest):
+        """Stream agent response from the streaming endpoint.
 
         Args:
             user_request: The user request to send
 
-        Returns:
-            Agent response
-
-        Raises:
-            Exception: If API call fails
+        Yields:
+            Server-sent events
 
         """
         try:
-            # Call the agent service API
-            response: requests.Response = requests.post(
-                f"{self.agent_api_url}/api/query",
+            # Call the agent streaming API
+            response = requests.post(
+                f"{self.agent_api_url}/agent/stream",
                 json=user_request.model_dump(),
                 headers={"Content-Type": "application/json"},
-                timeout=30,
+                stream=True,
+                timeout=60,
             )
 
             if response.status_code == 200:
-                data = response.json()
-                return AgentResponse(**data)
+                # Forward the streaming response
+                for line in response.iter_lines():
+                    if line:
+                        yield line.decode("utf-8") + "\n"
             else:
                 # Handle API error
-                error_detail = response.json().get("detail", "Unknown error")
-                raise Exception(f"Agent API error: {error_detail}")
+                error_detail = "Unknown error"
+                try:
+                    error_data = response.json()
+                    error_detail = error_data.get("detail", "Unknown error")
+                except:
+                    error_detail = f"HTTP {response.status_code}"
+
+                # Send error event
+                error_event = {
+                    "type": "error",
+                    "message": f"Agent API error: {error_detail}",
+                }
+                yield f"data: {json.dumps(error_event)}\n\n"
 
         except requests.exceptions.RequestException as e:
-            # Handle connection errors - return mock response for development
-            return AgentResponse(
-                session_id=user_request.session_id,
-                message=f"I received your message: '{user_request.message}'. "
-                f"Currently running in development mode - agent service may not be available. "
-                f"Connection error: {str(e)}",
-                status=RequestStatus.COMPLETED,
-                timestamp=datetime.now(),
-                tool_calls=[],
-                references=["Development mode"],
-                metadata={"error": "agent_unavailable", "mode": "development"},
-            )
+            # Handle connection errors
+            error_event = {"type": "error", "message": f"Connection error: {str(e)}"}
+            yield f"data: {json.dumps(error_event)}\n\n"
         except Exception as e:
-            # Return error response
-            return AgentResponse(
-                session_id=user_request.session_id,
-                message=f"Sorry, I encountered an error: {str(e)}",
-                status=RequestStatus.FAILED,
-                timestamp=datetime.now(),
-                tool_calls=[],
-                references=[],
-                metadata={"error": True},
-            )
+            # Handle other errors
+            error_event = {"type": "error", "message": f"Unexpected error: {str(e)}"}
+            yield f"data: {json.dumps(error_event)}\n\n"
 
     def run(self, host: str = "0.0.0.0", port: int = 5000, debug: bool = False) -> None:
         """Run the Flask application.

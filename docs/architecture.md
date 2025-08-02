@@ -58,7 +58,7 @@ InvestR Compose (Docker Compose) - Current Implementation
 - **OpenAI LLM**: Uses gpt-4o-mini for natural language processing
 - **Tool Orchestration**: Integrated tools for investment research workflow
 - **Streaming Responses**: Real-time response streaming capabilities
-- **REST Endpoints**: `/agent/query`, `/agent/stream`, `/health`
+- **REST Endpoints**: `/agent/stream`, `/health`
 - **Type Safety**: Full Pydantic model validation
 
 ### CLI Interface ✓ IMPLEMENTED
