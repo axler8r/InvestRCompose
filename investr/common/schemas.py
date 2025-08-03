@@ -11,7 +11,6 @@ For internal agent operations and complex domain models, use investr.agent.model
 """
 
 from datetime import datetime, timezone
-from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
@@ -27,21 +26,11 @@ class UserRequest(BaseModel):
     )
 
 
-class RequestStatus(str, Enum):
-    """Status of a request processing."""
-
-    PENDING = "pending"
-    PROCESSING = "processing"
-    COMPLETED = "completed"
-    FAILED = "failed"
-
-
 class AgentResponse(BaseModel):
     """Response from Agent API to Web UI."""
 
     session_id: str
     message: str
-    status: RequestStatus
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     tool_calls: Optional[List[Dict[str, Any]]] = Field(
         default=None, description="Details of tool calls made during processing"
@@ -52,18 +41,9 @@ class AgentResponse(BaseModel):
     metadata: Optional[Dict[str, Any]] = None
 
 
-class MessageRole(str, Enum):
-    """Role of a message in a conversation."""
-
-    USER = "user"
-    ASSISTANT = "assistant"
-    SYSTEM = "system"
-
-
 class Message(BaseModel):
     """A single message in a conversation."""
 
-    role: MessageRole
     content: str
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     metadata: Optional[Dict[str, Any]] = None
