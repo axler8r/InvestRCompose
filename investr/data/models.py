@@ -1,6 +1,6 @@
 """Pydantic models for conversation storage using Beanie ODM."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from beanie import Document
@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 class Message(BaseModel):
     """Individual message within a conversation."""
 
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     role: str = Field(..., description="Message role: 'user' or 'assistant'")
     content: str = Field(..., description="Message content")
     tool_calls: Optional[List[Dict[str, Any]]] = Field(
@@ -28,8 +28,8 @@ class Conversation(Document):
     user_id: Optional[str] = Field(
         default=None, description="User ID (reserved for future auth)"
     )
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     messages: List[Message] = Field(
         default_factory=list, description="List of messages in conversation"
     )

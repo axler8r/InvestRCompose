@@ -63,7 +63,7 @@ class ConversationTool(BaseTool[ConversationArgs, ConversationResult]):
                 return ConversationResult(
                     session_id=data.get("session_id", args.session_id),
                     message_count=data.get("message_count", 1),
-                    stored_at=datetime.utcnow(),
+                    stored_at=datetime.now(timezone.utc),
                 )
             else:
                 # API error - return mock result

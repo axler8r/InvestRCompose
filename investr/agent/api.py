@@ -3,7 +3,7 @@
 import json
 import os
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import AsyncIterator, Dict
 
 import uvicorn
@@ -81,7 +81,7 @@ class AgentAPI:
                 message={
                     "role": "user",
                     "content": user_request.message,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 },
                 message_type="user",
             )
@@ -211,7 +211,7 @@ class AgentAPI:
                         "tool_calls": tool_calls_for_storage
                         if tool_calls_for_storage
                         else None,
-                        "timestamp": datetime.utcnow().isoformat(),
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
                     },
                     message_type="assistant",
                 )

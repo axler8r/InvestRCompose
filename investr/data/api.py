@@ -2,7 +2,7 @@
 
 import os
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 import uvicorn
@@ -74,7 +74,7 @@ def create_app() -> FastAPI:
                 "service": "data-api",
                 "status": "healthy" if db_healthy else "unhealthy",
                 "database": "connected" if db_healthy else "disconnected",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             },
         )
 
@@ -108,7 +108,7 @@ def create_app() -> FastAPI:
             else:
                 # Add message to existing conversation
                 conversation.messages.append(request.message)
-                conversation.updated_at = datetime.utcnow()
+                conversation.updated_at = datetime.now(timezone.utc)
                 await conversation.save()
 
             return ConversationResponse(
@@ -208,7 +208,7 @@ def create_app() -> FastAPI:
                 content={
                     "message": f"Conversation deleted for session: {session_id}",
                     "session_id": session_id,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 },
             )
 
@@ -257,7 +257,7 @@ def create_app() -> FastAPI:
                 content={
                     "sessions": session_list,
                     "total_count": len(session_list),
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 },
             )
 
