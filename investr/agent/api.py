@@ -4,7 +4,7 @@ import json
 import os
 import traceback
 from datetime import datetime, timezone
-from typing import AsyncIterator, Dict
+from typing import AsyncIterator
 
 import uvicorn
 from autogen_agentchat.agents._assistant_agent import AssistantAgent
@@ -22,7 +22,7 @@ from investr.common.exceptions import (
     generic_exception_handler,
     http_exception_handler,
 )
-from investr.common.schemas import UserRequest
+from investr.common.schemas import HealthCheck, UserRequest
 
 
 class AgentAPI:
@@ -275,9 +275,11 @@ def create_app(
         )
 
     @app.get("/health")
-    async def health_check() -> Dict[str, str]:
+    async def health_check() -> HealthCheck:
         """Health check endpoint."""
-        return {"status": "healthy", "service": "investment-agent"}
+        return HealthCheck(
+            service="investment-agent", status="healthy", version="1.0.0"
+        )
 
     return app
 

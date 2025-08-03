@@ -85,6 +85,7 @@ class HealthCheck(BaseModel):
     status: str
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     version: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class ErrorResponse(BaseModel):

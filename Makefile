@@ -16,6 +16,7 @@ TEST_DIR := tests
 .PHONY: help \
 		install \
 		requirements build up down start stop restart status logs clean \
+		health agent-health data-health openbb-health webui-health \
 		lint format check test \
 		docker-rmdi docker-rmdv compose-rmi docker-clean \
 		browse cli mongosh
@@ -72,9 +73,23 @@ logs: ## Show logs of Docker containers
 	@echo "Showing logs of Docker containers..."
 	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) logs --follow
 
-clean: down ## Clean up Docker containers and images
-	@echo "Cleaning up Docker containers and images..."
-	$(DOCKER_COMPOSE) down --rmi all --volumes --remove-orphans
+agent-health: ## Check health of the Agent service
+	@echo "Checking health status of Agent API..."
+	@curl -s http://localhost:8000/health | $(PYTHON) -m json.tool || echo "Agent API unavailable"
+
+data-health: ## Check health of the Data service
+	@echo "Checking health status of Data API..."
+	@curl -s http://localhost:8002/health | $(PYTHON) -m json.tool || echo "Data API unavailable"
+
+openbb-health: ## Check health of the OpenBB API service
+	@echo "Checking health status of OpenBB API..."
+	@curl -s http://localhost:8001/health | $(PYTHON) -m json.tool || echo "OpenBB API unavailable"
+
+webui-health: ## Check health of the Web UI service
+	@echo "Checking health status of Web UI..."
+	@curl -s http://localhost:5000/api/health | $(PYTHON) -m json.tool || echo "Web UI unavailable"
+
+health: agent-health data-health openbb-health webui-health ## Check health services
 
 
 # code quality targets ---------------------------------------------->8---------
@@ -95,9 +110,10 @@ type-check: ## Run type checker
 	@echo "Running type checker..."
 	$(TY) check $(SOURCE_DIR)
 
-stripout: ## Clear output cells from Jupyter notebooks
-	@echo "Stripping output from Jupyter notebooks..."
-	$(STRIPOUT) notebooks/*.ipynb
+clean: ## Clean up temporary files
+	@echo "Cleaning up temporary files..."
+	rm -rf $(APP_DIR)/__pycache__
+	rm -rf $(APP_DIR)/*.pyc
 
 
 # docker housekeeping targets --------------------------------------->8---------
@@ -135,4 +151,3 @@ cli: ## Run the interactive CLI application
 mongosh: ## Connect to MongoDB shell
 	@echo "Connecting to MongoDB shell..."
 	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) exec mongodb mongosh investr
-

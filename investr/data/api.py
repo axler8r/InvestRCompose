@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, Response, status
 from fastapi.responses import JSONResponse
 from loguru import logger
 
@@ -14,6 +14,7 @@ from investr.common.exceptions import (
     generic_exception_handler,
     http_exception_handler,
 )
+from investr.common.schemas import HealthCheck
 from investr.data.database import mongodb_client
 from investr.data.models import (
     Conversation,
@@ -57,25 +58,24 @@ def create_app() -> FastAPI:
     app.add_exception_handler(Exception, generic_exception_handler)  # type: ignore
 
     @app.get("/health")
-    async def health_check() -> JSONResponse:
+    async def health_check(response: Response) -> HealthCheck:
         """Health check endpoint.
 
         Returns:
-            JSON response with service health status
+            HealthCheck response with service health status including database connectivity
 
         """
         db_healthy: bool = await mongodb_client.health_check()
 
-        return JSONResponse(
-            status_code=status.HTTP_200_OK
-            if db_healthy
-            else status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={
-                "service": "data-api",
-                "status": "healthy" if db_healthy else "unhealthy",
-                "database": "connected" if db_healthy else "disconnected",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            },
+        # Set appropriate HTTP status code
+        if not db_healthy:
+            response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+        return HealthCheck(
+            service="data-api",
+            status="healthy" if db_healthy else "unhealthy",
+            version="1.0.0",
+            metadata={"database": "connected" if db_healthy else "disconnected"},
         )
 
     @app.post("/conversations")
