@@ -126,7 +126,7 @@ test: ## Run tests using pytest
 # utility targets --------------------------------------------------->8---------
 browse: ## Open the application in a web browser
 	@echo "Opening application in web browser..."
-	xdg-open http://localhost:5000 || open http://localhost:5000
+	xdg-open http://localhost:5000
 
 cli: ## Run the interactive CLI application
 	@echo "Starting CLI application..."
