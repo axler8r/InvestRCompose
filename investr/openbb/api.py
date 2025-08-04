@@ -16,7 +16,7 @@ from investr.common.exceptions import (
     http_exception_handler,
 )
 from investr.common.schemas import HealthCheck
-from investr.openbb.openbb_client import OpenBBClient
+from investr.openbb.client import openbb_client
 
 
 class OpenBBAPI:
@@ -24,7 +24,7 @@ class OpenBBAPI:
 
     def __init__(self) -> None:
         """Initialize the OpenBB API service."""
-        self.client = OpenBBClient()
+        self.client = openbb_client
 
     def create_app(self) -> FastAPI:
         """Create and configure the FastAPI application.

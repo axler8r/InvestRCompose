@@ -6,6 +6,6 @@ financial metrics.
 """
 
 from investr.openbb.api import create_app
-from investr.openbb.openbb_client import OpenBBClient
+from investr.openbb.client import OpenBBClient, openbb_client
 
-__all__: list[str] = ["create_app", "OpenBBClient"]
+__all__: list[str] = ["create_app", "OpenBBClient", "openbb_client"]
