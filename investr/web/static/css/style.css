@@ -272,6 +272,22 @@ body {
     margin-top: 0.25rem;
 }
 
+.tool-execution-time {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+    font-style: italic;
+}
+
+.tool-error {
+    font-size: 0.8rem;
+    color: #721c24;
+    background-color: #f8d7da;
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    margin-top: 0.25rem;
+}
+
 /* Progress indicator styles for streaming */
 .progress-indicator {
     margin-bottom: 0.5rem;

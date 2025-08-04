@@ -11,9 +11,25 @@ For internal agent operations and complex domain models, use investr.agent.model
 """
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field
+
+
+class ToolResult(BaseModel):
+    """Tool execution result for Web UI disclosure widgets."""
+
+    tool_name: str = Field(..., description="Name of the executed tool")
+    success: bool = Field(..., description="Whether the tool execution was successful")
+    result: Union[str, Dict[str, Any], List[Any]] = Field(
+        ..., description="Tool execution result"
+    )
+    error_message: Optional[str] = Field(
+        None, description="Error message if execution failed"
+    )
+    execution_time_ms: Optional[float] = Field(
+        None, description="Tool execution time in milliseconds"
+    )
 
 
 class UserRequest(BaseModel):
@@ -32,7 +48,7 @@ class AgentResponse(BaseModel):
     session_id: str
     message: str
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    tool_calls: Optional[List[Dict[str, Any]]] = Field(
+    tool_calls: Optional[List[ToolResult]] = Field(
         default=None, description="Details of tool calls made during processing"
     )
     references: Optional[List[str]] = Field(

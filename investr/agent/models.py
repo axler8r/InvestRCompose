@@ -17,22 +17,6 @@ from typing import Any, Dict, List, Optional, Union
 from pydantic import BaseModel, Field
 
 
-class ToolResult(BaseModel):
-    """Result from a tool execution."""
-
-    tool_name: str = Field(..., description="Name of the executed tool")
-    success: bool = Field(..., description="Whether the tool execution was successful")
-    result: Union[str, Dict[str, Any], List[Any]] = Field(
-        ..., description="Tool execution result"
-    )
-    error_message: Optional[str] = Field(
-        None, description="Error message if execution failed"
-    )
-    execution_time_ms: Optional[float] = Field(
-        None, description="Tool execution time in milliseconds"
-    )
-
-
 # Tool-specific models
 class ConversationArgs(BaseModel):
     """Arguments for conversation storage tool."""
@@ -90,8 +74,6 @@ class AnalysisResult(BaseModel):
 
 # Export all models
 __all__ = [
-    # Core models
-    "ToolResult",
     # Tool-specific models
     "ConversationArgs",
     "ConversationResult",

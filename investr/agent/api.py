@@ -2,6 +2,7 @@
 
 import json
 import os
+import time
 import traceback
 from datetime import datetime, timezone
 from typing import AsyncIterator
@@ -22,7 +23,7 @@ from investr.common.exceptions import (
     generic_exception_handler,
     http_exception_handler,
 )
-from investr.common.schemas import HealthCheck, UserRequest
+from investr.common.schemas import HealthCheck, ToolResult, UserRequest
 
 
 class AgentAPI:
@@ -101,6 +102,7 @@ class AgentAPI:
 
             final_response_content = ""
             tool_calls_for_storage = []
+            tool_execution_times = {}  # Track execution timing for each tool
 
             # Stream from AutoGen agent
             async for message in self.agent.run_stream(
@@ -116,6 +118,10 @@ class AgentAPI:
                         # Extract tool name from first function call
                         first_call = content[0]
                         tool_name = getattr(first_call, "name", "unknown_tool")
+                        
+                        # Start timing this tool execution
+                        tool_execution_times[tool_name] = time.time()
+                        
                         friendly_message = tool_messages.get(
                             tool_name, f"Using {tool_name} tool..."
                         )
@@ -138,6 +144,12 @@ class AgentAPI:
                         is_error = getattr(execution_result, "is_error", False)
 
                         success = not is_error
+                        
+                        # Calculate execution time
+                        execution_time_ms = None
+                        if tool_name in tool_execution_times:
+                            execution_time_ms = (time.time() - tool_execution_times[tool_name]) * 1000
+                            del tool_execution_times[tool_name]  # Clean up
 
                         # Create user-friendly completion message
                         if success:
@@ -153,25 +165,24 @@ class AgentAPI:
                         else:
                             friendly_message = f"Failed to complete {tool_name}"
 
+                        # Create structured ToolResult for storage
+                        tool_result_obj = ToolResult(
+                            tool_name=tool_name,
+                            success=success,
+                            result=str(tool_result)[:500],  # Truncate for storage
+                            error_message=str(tool_result) if not success else None,
+                            execution_time_ms=execution_time_ms
+                        )
+                        tool_calls_for_storage.append(tool_result_obj)
+
                         tool_complete_event = {
                             "type": "tool_complete",
                             "message": friendly_message,
                             "tool": tool_name,
                             "success": success,
+                            "tool_result": tool_result_obj.model_dump()  # Send structured data
                         }
                         yield f"data: {json.dumps(tool_complete_event)}\n\n"
-
-                        # Store tool call for conversation
-                        tool_calls_for_storage.append(
-                            {
-                                "tool": tool_name,
-                                "success": success,
-                                "result": str(tool_result)[
-                                    :500
-                                ],  # Truncate for storage
-                                "execution_time_ms": 1000,  # Mock value
-                            }
-                        )
 
                 # Handle ToolCallSummaryMessage - agent's final response after tool use
                 elif message_type == "ToolCallSummaryMessage":
@@ -203,14 +214,15 @@ class AgentAPI:
 
             # Store assistant response in conversation
             if self.conversation_tool:
+                # Convert ToolResult objects to dicts for JSON serialization
+                tool_calls_dict = [tool_call.model_dump() for tool_call in tool_calls_for_storage] if tool_calls_for_storage else None
+                
                 conversation_args = ConversationArgs(
                     session_id=user_request.session_id,
                     message={
                         "role": "assistant",
                         "content": final_response_content,
-                        "tool_calls": tool_calls_for_storage
-                        if tool_calls_for_storage
-                        else None,
+                        "tool_calls": tool_calls_dict,
                         "timestamp": datetime.now(timezone.utc).isoformat(),
                     },
                     message_type="assistant",
