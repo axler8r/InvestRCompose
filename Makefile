@@ -151,3 +151,4 @@ cli: ## Run the interactive CLI application
 mongosh: ## Connect to MongoDB shell
 	@echo "Connecting to MongoDB shell..."
 	$(DOCKER_COMPOSE) --file $(DOCKER_COMPOSE_FILE) exec mongodb mongosh investr
+

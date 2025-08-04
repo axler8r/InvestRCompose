@@ -55,6 +55,7 @@ function addMessage(content, isUser = false, timestamp = null, toolCalls = [], r
                 const statusClass = tool.success ? 'success' : 'error';
                 const statusText = tool.success ? 'Success' : 'Failed';
                 
+<<<<<<< HEAD
                 // Handle both old and new ToolResult structure
                 const toolName = tool.tool_name || tool.name || 'Unknown Tool';
                 const executionTime = tool.execution_time_ms;
@@ -68,6 +69,16 @@ function addMessage(content, isUser = false, timestamp = null, toolCalls = [], r
                         <div class="tool-result">${tool.result}</div>
                         ${executionTime ? `<div class="tool-execution-time">Execution time: ${Math.round(executionTime)}ms</div>` : ''}
                         ${tool.error_message ? `<div class="tool-error">Error: ${tool.error_message}</div>` : ''}
+=======
+                return `
+                    <div class="tool-call">
+                        <div class="tool-call-header">
+                            <span class="tool-name">${tool.name}</span>
+                            <span class="tool-status ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="tool-result">${tool.result}</div>
+                        ${tool.execution_time_ms ? `<div class="tool-execution-time">Execution time: ${tool.execution_time_ms}ms</div>` : ''}
+>>>>>>> 03816ad8445ab268e4f29a397ba35b43dda18cf2
                     </div>
                 `;
             }).join('');
@@ -249,6 +260,7 @@ async function sendMessage() {
                                         if (currentProgressElement) {
                                             updateProgressIndicator(currentProgressElement, data.message, data.success);
                                         }
+<<<<<<< HEAD
                                         // Use structured ToolResult data if available, otherwise fall back to manual construction
                                         if (data.tool_result) {
                                             toolCalls.push(data.tool_result);
@@ -261,6 +273,15 @@ async function sendMessage() {
                                                 execution_time_ms: null
                                             });
                                         }
+=======
+                                        // Store tool call information
+                                        toolCalls.push({
+                                            name: data.tool,
+                                            success: data.success,
+                                            result: data.message,
+                                            execution_time_ms: 1000 // Mock value
+                                        });
+>>>>>>> 03816ad8445ab268e4f29a397ba35b43dda18cf2
                                         currentProgressElement = null;
                                         break;
                                         
