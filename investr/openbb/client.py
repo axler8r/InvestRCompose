@@ -220,3 +220,7 @@ class OpenBBClient:
             "exchange": "MOCK_EXCHANGE",
             "asset_type": "MOCK_EQUITY",
         }
+
+
+# Global singleton instance
+openbb_client = OpenBBClient()

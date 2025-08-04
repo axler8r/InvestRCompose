@@ -6,8 +6,7 @@ from investr.common.schemas import (
     ErrorResponse,
     HealthCheck,
     Message,
-    MessageRole,
-    RequestStatus,
+    ToolResult,
     UserRequest,
 )
 
@@ -17,7 +16,6 @@ __all__: list[str] = [
     "ErrorResponse",
     "HealthCheck",
     "Message",
-    "MessageRole",
-    "RequestStatus",
+    "ToolResult",
     "UserRequest",
 ]

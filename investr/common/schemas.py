@@ -11,10 +11,25 @@ For internal agent operations and complex domain models, use investr.agent.model
 """
 
 from datetime import datetime, timezone
-from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field
+
+
+class ToolResult(BaseModel):
+    """Tool execution result for Web UI disclosure widgets."""
+
+    tool_name: str = Field(..., description="Name of the executed tool")
+    success: bool = Field(..., description="Whether the tool execution was successful")
+    result: Union[str, Dict[str, Any], List[Any]] = Field(
+        ..., description="Tool execution result"
+    )
+    error_message: Optional[str] = Field(
+        None, description="Error message if execution failed"
+    )
+    execution_time_ms: Optional[float] = Field(
+        None, description="Tool execution time in milliseconds"
+    )
 
 
 class UserRequest(BaseModel):
@@ -27,23 +42,13 @@ class UserRequest(BaseModel):
     )
 
 
-class RequestStatus(str, Enum):
-    """Status of a request processing."""
-
-    PENDING = "pending"
-    PROCESSING = "processing"
-    COMPLETED = "completed"
-    FAILED = "failed"
-
-
 class AgentResponse(BaseModel):
     """Response from Agent API to Web UI."""
 
     session_id: str
     message: str
-    status: RequestStatus
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    tool_calls: Optional[List[Dict[str, Any]]] = Field(
+    tool_calls: Optional[List[ToolResult]] = Field(
         default=None, description="Details of tool calls made during processing"
     )
     references: Optional[List[str]] = Field(
@@ -52,18 +57,9 @@ class AgentResponse(BaseModel):
     metadata: Optional[Dict[str, Any]] = None
 
 
-class MessageRole(str, Enum):
-    """Role of a message in a conversation."""
-
-    USER = "user"
-    ASSISTANT = "assistant"
-    SYSTEM = "system"
-
-
 class Message(BaseModel):
     """A single message in a conversation."""
 
-    role: MessageRole
     content: str
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     metadata: Optional[Dict[str, Any]] = None
@@ -85,6 +81,7 @@ class HealthCheck(BaseModel):
     status: str
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     version: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class ErrorResponse(BaseModel):

@@ -16,7 +16,7 @@ from investr.common.exceptions import (
     http_exception_handler,
 )
 from investr.common.schemas import HealthCheck
-from investr.openbb.openbb_client import OpenBBClient
+from investr.openbb.client import openbb_client
 
 
 class OpenBBAPI:
@@ -24,7 +24,7 @@ class OpenBBAPI:
 
     def __init__(self) -> None:
         """Initialize the OpenBB API service."""
-        self.client = OpenBBClient()
+        self.client = openbb_client
 
     def create_app(self) -> FastAPI:
         """Create and configure the FastAPI application.
@@ -106,79 +106,6 @@ class OpenBBAPI:
                 raise HTTPException(
                     status_code=500,
                     detail=f"Error retrieving historical data for {symbol}: {str(e)}",
-                )
-
-        @app.get("/market-data/quote/{symbol}")
-        async def get_quote(
-            symbol: str,
-            provider: Annotated[str, Query(description="Data provider")] = "yfinance",
-        ) -> Dict[str, Any]:
-            """Get current quote for a symbol.
-
-            Args:
-                symbol: Stock symbol (e.g., AAPL)
-                provider: Data provider to use
-
-            Returns:
-                Current quote data
-
-            """
-            try:
-                start_time: float = time.time()
-
-                quote_data: Dict[str, Any] = await self.client.get_quote(
-                    symbol=symbol.upper(), provider=provider
-                )
-
-                query_time_ms = (time.time() - start_time) * 1000
-                quote_data["query_time_ms"] = round(query_time_ms, 2)
-
-                return quote_data
-
-            except Exception as e:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Error retrieving quote for {symbol}: {str(e)}",
-                )
-
-        @app.get("/market-data/batch")
-        async def get_batch_quotes(
-            symbols: Annotated[str, Query(description="Comma-separated symbols")],
-            provider: Annotated[str, Query(description="Data provider")] = "yfinance",
-        ) -> Dict[str, Any]:
-            """Get quotes for multiple symbols.
-
-            Args:
-                symbols: Comma-separated list of symbols
-                provider: Data provider to use
-
-            Returns:
-                Batch quote data
-
-            """
-            try:
-                symbol_list: List[str] = [s.strip().upper() for s in symbols.split(",")]
-                results = {}
-
-                for symbol in symbol_list:
-                    try:
-                        quote_data: Dict[str, Any] = await self.client.get_quote(
-                            symbol=symbol, provider=provider
-                        )
-                        results[symbol] = quote_data
-                    except Exception as e:
-                        results[symbol] = {"error": str(e)}
-
-                return {
-                    "symbols": symbol_list,
-                    "results": results,
-                    "count": len(symbol_list),
-                    "provider": provider,
-                }
-
-            except Exception as e:
-                raise HTTPException(
-                    status_code=500, detail=f"Error retrieving batch quotes: {str(e)}"
                 )
 
         return app
